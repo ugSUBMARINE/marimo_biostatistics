@@ -1,0 +1,62 @@
+light_conditions,tissue,peroxidase_amount
+light,root,0.3
+light,root,0.6
+light,root,1.3
+light,root,1.4
+light,root,0.8
+light,root,0.8
+light,root,0.5
+light,root,1.6
+light,root,1.4
+light,root,1.3
+light,mesocotyl,0.5
+light,mesocotyl,0.8
+light,mesocotyl,1.7
+light,mesocotyl,2.4
+light,mesocotyl,1.1
+light,mesocotyl,1.9
+light,mesocotyl,1.0
+light,mesocotyl,1.4
+light,mesocotyl,1.4
+light,mesocotyl,1.8
+light,primary leaf,2.1
+light,primary leaf,2.1
+light,primary leaf,3.1
+light,primary leaf,2.4
+light,primary leaf,1.7
+light,primary leaf,2.1
+light,primary leaf,3.3
+light,primary leaf,3.1
+light,primary leaf,2.6
+light,primary leaf,2.5
+dark,root,0.8
+dark,root,0.6
+dark,root,0.2
+dark,root,1.6
+dark,root,1.0
+dark,root,0.7
+dark,root,0.8
+dark,root,1.0
+dark,root,0.5
+dark,root,0.9
+dark,mesocotyl,1.0
+dark,mesocotyl,1.1
+dark,mesocotyl,1.0
+dark,mesocotyl,0.9
+dark,mesocotyl,0.3
+dark,mesocotyl,1.5
+dark,mesocotyl,0.5
+dark,mesocotyl,0.4
+dark,mesocotyl,1.7
+dark,mesocotyl,0.7
+dark,primary leaf,0.9
+dark,primary leaf,1.9
+dark,primary leaf,1.3
+dark,primary leaf,0.7
+dark,primary leaf,0.7
+dark,primary leaf,1.5
+dark,primary leaf,1.7
+dark,primary leaf,1.6
+dark,primary leaf,1.4
+dark,primary leaf,1.3
+

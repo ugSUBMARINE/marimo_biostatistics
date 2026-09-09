@@ -1,0 +1,21 @@
+[project]
+name = "marimo-biostatistics"
+version = "0.1.0"
+description = "Marimo notebook companion for the lecture course 'Biostatistics'"
+readme = "README.md"
+authors = [
+    { name = "Karl Gruber", email = "gammaturn@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "marimo>=0.23.15",
+    "matplotlib>=3.11.1",
+    "numpy>=2.5.1",
+    "pandas>=3.0.5",
+    "scipy>=1.18.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.1",
+]

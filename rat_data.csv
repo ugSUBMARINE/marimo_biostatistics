@@ -1,0 +1,28 @@
+#
+# Maximum relaxation (in %) of urinary bladder muscle strips of
+# old and young rats during treatment with high doses of norepinephrine.
+#
+# Frazier, E.P., Schneider, T., Michel, M.C.
+# "Effects of gender, age and hypertension on β-adrenergic receptor
+# function in rat urinary bladder"
+# Naunyn-Schmiedeberg's Archives of Pharmacology, 373(4), 300-309 (2006)
+#
+age,relax
+old,20.8
+old,2.8
+old,50.0
+old,33.3
+old,29.4
+old,38.9
+old,29.4
+old,52.6
+old,14.3
+young,45.5
+young,55.0
+young,60.7
+young,61.5
+young,61.1
+young,65.5
+young,42.9
+young,37.5
+
