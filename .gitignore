@@ -5,3 +5,6 @@ uv.lock
 
 # MacOS related files
 .DS_Store
+
+# untracked website files
+_site
