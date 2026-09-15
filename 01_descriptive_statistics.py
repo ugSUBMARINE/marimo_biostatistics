@@ -1,25 +1,29 @@
 # /// script
 # requires-python = ">=3.14"
 # dependencies = [
-#     "marimo==0.23.15",
-#     "matplotlib==3.11.1",
-#     "numpy==2.5.1",
-#     "pandas==3.0.5",
-#     "scipy==1.18.0",
+#     "marimo>=0.24",
+#     "matplotlib>=3.11",
+#     "numpy>=2.5",
+#     "pandas>=3.0",
+#     "scipy>=1.18",
 # ]
 # ///
 
 import marimo
 
-__generated_with = "0.23.15"
+__generated_with = "0.24.2"
 app = marimo.App(width="medium", app_title="Descriptive statistics")
 
 
 @app.cell
 def _():
-    from pathlib import Path
-
     import marimo as mo
+
+    return (mo,)
+
+
+@app.cell
+def _():
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
@@ -44,11 +48,9 @@ def _():
         FIGURE_SIZE_LINKED,
         FIGURE_SIZE_SHALLOW,
         FIGURE_SIZE_STANDARD,
-        Path,
         cohen_d_sample,
         compact_table,
         dataset_action_buttons,
-        mo,
         np,
         pd,
         plt,
@@ -89,8 +91,8 @@ def _(mo):
 
 
 @app.cell
-def _(Path, mo, np, pd, stats):
-    data_path = Path(__file__).parent / "height_data.csv"
+def _(mo, np, pd, stats):
+    data_path = mo.notebook_location() / "public" / "height_data.csv"
     original_height_data = pd.read_csv(data_path).sample(frac=1).reset_index(drop=True)
 
     expected_columns = {"gender", "height"}
@@ -1538,14 +1540,14 @@ def _(
         density_1,
         color=COLORS["orange"],
         alpha=0.5,
-        label=f"Distribution 1: μ = {mean_1:.1f}, σ = {spread_1:.1f}",
+        label=f"μ = {mean_1:.1f}, σ = {spread_1:.1f}",
     )
     effect_axis.fill_between(
         effect_x,
         density_2,
         color=COLORS["purple"],
         alpha=0.5,
-        label=f"Distribution 2: μ = {mean_2:.1f}, σ = {spread_2:.1f}",
+        label=f"μ = {mean_2:.1f}, σ = {spread_2:.1f}",
     )
     effect_axis.fill_between(
         effect_x,
@@ -1563,7 +1565,7 @@ def _(
         ylabel="Probability density",
         yticks=[],
     )
-    effect_axis.legend(frameon=False, fontsize=8)
+    effect_axis.legend(frameon=False, fontsize=8, loc="upper left")
     effect_figure.tight_layout()
 
     effect_controls = mo.vstack(
@@ -1844,18 +1846,6 @@ def _(mo):
     accurately its summaries estimate unknown population quantities.
     """)
 
-
-# @app.cell
-# def _(mo):
-#     mo.md(r"""
-#     ### Sources and reuse notes
-
-#     - Artificial data: `Jupyter_notebooks/height_data.csv`
-#     - Legacy demonstrations adapted conceptually from
-#       `Beschreibende_Statistik.ipynb` and `Cohen_d_value.ipynb`
-#     - The height simulation in the legacy material was inspired by the Behavioral
-#       Risk Factor Surveillance System (BRFSS).
-#     """)
 
 if __name__ == "__main__":
     app.run()

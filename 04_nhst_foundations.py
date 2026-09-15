@@ -1,23 +1,29 @@
 # /// script
 # requires-python = ">=3.14"
 # dependencies = [
-#     "marimo==0.23.15",
-#     "matplotlib==3.11.1",
-#     "numpy==2.5.1",
-#     "pandas==3.0.5",
-#     "scipy==1.18.0",
+#     "marimo>=0.24",
+#     "matplotlib>=3.11",
+#     "numpy>=2.5",
+#     "pandas>=3.0",
+#     "scipy>=1.18",
 # ]
 # ///
 
 import marimo
 
-__generated_with = "0.23.15"
+__generated_with = "0.24.2"
 app = marimo.App(width="medium", app_title="NHST foundations")
 
 
 @app.cell
 def _():
     import marimo as mo
+
+    return mo
+
+
+@app.cell
+def _():
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
@@ -39,7 +45,6 @@ def _():
         FIGURE_SIZE_SHALLOW,
         FIGURE_SIZE_STANDARD,
         compact_table,
-        mo,
         np,
         pd,
         plt,
@@ -1713,9 +1718,10 @@ def _(mo):
 
     A p-value is not the probability that $H_0$ is true, and $1-p$ is not the
     probability that $H_1$ is true. Failure to reject does not prove equality. A
-    small p-value does not establish a large, important, or unbiased effect. Nor is a
-    p-value the probability that “chance caused” the result; randomness is part of
-    the model used to evaluate compatibility.
+    small p-value does not establish a large, important, or unbiased effect.
+    Nor does a p-value tell you the probability that 'chance caused' your result.
+    Instead, random chance is a built-in assumption of the null hypothesis, and the
+    p-value simply measures how well your data matches that assumption.
 
     These statements assume that the analysis procedure was specified and applied as
     claimed. Repeated looks, selective outcome reporting, and trying many analyses can

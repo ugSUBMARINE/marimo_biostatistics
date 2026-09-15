@@ -1,25 +1,29 @@
 # /// script
 # requires-python = ">=3.14"
 # dependencies = [
-#     "marimo==0.23.15",
-#     "matplotlib==3.11.1",
-#     "numpy==2.5.1",
-#     "pandas==3.0.5",
-#     "scipy==1.18.0",
+#     "marimo>=0.24",
+#     "matplotlib>=3.11",
+#     "numpy>=2.5",
+#     "pandas>=3.0",
+#     "scipy>=1.18",
 # ]
 # ///
 
 import marimo
 
-__generated_with = "0.23.15"
+__generated_with = "0.24.2"
 app = marimo.App(width="medium", app_title="Bayesian statistics")
 
 
 @app.cell
 def _():
-    from pathlib import Path
-
     import marimo as mo
+
+    return mo
+
+
+@app.cell
+def _():
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
@@ -40,9 +44,7 @@ def _():
         FIGURE_SIZE_LINKED,
         FIGURE_SIZE_SHALLOW,
         FIGURE_SIZE_STANDARD,
-        Path,
         compact_table,
-        mo,
         np,
         pd,
         plt,
@@ -53,8 +55,8 @@ def _():
 
 
 @app.cell
-def _(Path, np, pd):
-    water_path = Path(__file__).parent / "Wasserqualitaet.csv"
+def _(mo, np, pd):
+    water_path = mo.notebook_location() / "public" / "Wasserqualitaet.csv"
     water_raw = pd.read_csv(water_path, encoding="utf-8-sig")
     flow_column = "Fließgeschwindigkeit (m/s)"
     oxygen_column = "Sauerstoffkonzentration (mg/l)"
@@ -838,9 +840,7 @@ def _(
     lecture_rolls = dice_sequence[: int(dice_reveal.value)]
     student_rolls = list(get_student_dice_rolls())
     revealed_rolls = (
-        lecture_rolls
-        if dice_sequence_source.value == "lecture"
-        else student_rolls
+        lecture_rolls if dice_sequence_source.value == "lecture" else student_rolls
     )
     dice_result = dice_update(
         dice_sides, dice_priors[dice_prior_choice.value], revealed_rolls

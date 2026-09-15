@@ -1,25 +1,29 @@
 # /// script
 # requires-python = ">=3.14"
 # dependencies = [
-#     "marimo==0.23.15",
-#     "matplotlib==3.11.1",
-#     "numpy==2.5.1",
-#     "pandas==3.0.5",
-#     "scipy==1.18.0",
+#     "marimo>=0.24",
+#     "matplotlib>=3.11",
+#     "numpy>=2.5",
+#     "pandas>=3.0",
+#     "scipy>=1.18",
 # ]
 # ///
 
 import marimo
 
-__generated_with = "0.23.15"
+__generated_with = "0.24.2"
 app = marimo.App(width="medium", app_title="Correlation and regression")
 
 
 @app.cell
 def _():
-    from pathlib import Path
-
     import marimo as mo
+
+    return mo
+
+
+@app.cell
+def _():
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
@@ -38,9 +42,7 @@ def _():
         COLORS,
         FIGURE_SIZE_LINKED,
         FIGURE_SIZE_STANDARD,
-        Path,
         compact_table,
-        mo,
         np,
         optimize,
         pd,
@@ -84,8 +86,8 @@ def _(mo):
 
 
 @app.cell
-def _(Path, np, pd, stats):
-    water_data_path = Path(__file__).parent / "Wasserqualitaet.csv"
+def _(mo, np, pd, stats):
+    water_data_path = mo.notebook_location() / "public" / "Wasserqualitaet.csv"
     raw_water_data = pd.read_csv(water_data_path, encoding="utf-8-sig")
 
     german_to_english = {

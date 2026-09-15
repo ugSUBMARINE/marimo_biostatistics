@@ -1,26 +1,31 @@
 # /// script
 # requires-python = ">=3.14"
 # dependencies = [
-#     "marimo==0.23.15",
-#     "matplotlib==3.11.1",
-#     "numpy==2.5.1",
-#     "pandas==3.0.5",
-#     "scipy==1.18.0",
+#     "marimo>=0.24",
+#     "matplotlib>=3.11",
+#     "numpy>=2.5",
+#     "pandas>=3.0",
+#     "scipy>=1.18",
 # ]
 # ///
 
 import marimo
 
-__generated_with = "0.23.15"
+__generated_with = "0.24.2"
 app = marimo.App(width="medium", app_title="Inferential statistics")
 
 
 @app.cell
 def _():
-    from itertools import product
-    from pathlib import Path
-
     import marimo as mo
+
+    return mo
+
+
+@app.cell
+def _():
+    from itertools import product
+
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
@@ -41,9 +46,7 @@ def _():
         FIGURE_SIZE_LINKED,
         FIGURE_SIZE_SHALLOW,
         FIGURE_SIZE_STANDARD,
-        Path,
         compact_table,
-        mo,
         np,
         pd,
         plt,
@@ -85,8 +88,8 @@ def _(mo):
 
 
 @app.cell
-def _(Path, np, pd, stats):
-    height_data_path = Path(__file__).parent / "height_data.csv"
+def _(mo, np, pd, stats):
+    height_data_path = mo.notebook_location() / "public" / "height_data.csv"
     lecture_height_data = pd.read_csv(height_data_path)
     assert set(lecture_height_data.columns) == {"gender", "height"}
     assert len(lecture_height_data) == 97

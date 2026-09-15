@@ -1,27 +1,32 @@
 # /// script
 # requires-python = ">=3.14"
 # dependencies = [
-#     "marimo==0.23.15",
-#     "matplotlib==3.11.1",
-#     "numpy==2.5.1",
-#     "pandas==3.0.5",
-#     "scipy==1.18.0",
+#     "marimo>=0.24",
+#     "matplotlib>=3.11",
+#     "numpy>=2.5",
+#     "pandas>=3.0",
+#     "scipy>=1.18",
 # ]
 # ///
 
 import marimo
 
-__generated_with = "0.23.15"
+__generated_with = "0.24.2"
 app = marimo.App(width="medium", app_title="NHST examples")
+
+
+@app.cell
+def _():
+    import marimo as mo
+
+    return mo
 
 
 @app.cell
 def _():
     from itertools import combinations
     from math import comb
-    from pathlib import Path
 
-    import marimo as mo
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
@@ -43,12 +48,10 @@ def _():
         FIGURE_SIZE_LINKED,
         FIGURE_SIZE_SHALLOW,
         FIGURE_SIZE_STANDARD,
-        Path,
         cohen_d_sample,
         comb,
         combinations,
         compact_table,
-        mo,
         np,
         pd,
         plt,
@@ -59,12 +62,12 @@ def _():
 
 
 @app.cell
-def _(Path, np, pd):
-    notebook_directory = Path(__file__).parent
-    rat_data = pd.read_csv(notebook_directory / "rat_data.csv", comment="#")
-    peroxidase_data = pd.read_csv(notebook_directory / "peroxidase.csv")
+def _(mo, np, pd):
+    data_directory = mo.notebook_location() / "public"
+    rat_data = pd.read_csv(data_directory / "rat_data.csv", comment="#")
+    peroxidase_data = pd.read_csv(data_directory / "peroxidase.csv")
     water_data = pd.read_csv(
-        notebook_directory / "Wasserqualitaet.csv", encoding="utf-8-sig"
+        data_directory / "Wasserqualitaet.csv", encoding="utf-8-sig"
     )
 
     assert list(rat_data.columns) == ["age", "relax"]
@@ -1152,7 +1155,7 @@ def _(
     paired_figure, (paired_connection_axis, paired_difference_axis) = plt.subplots(
         1,
         2,
-        figsize=FIGURE_SIZE_LINKED,
+        figsize=(5.8, 3.8),
         gridspec_kw={"width_ratios": [1.45, 1]},
     )
     for paired_index, (before_value, after_value) in enumerate(
@@ -1261,7 +1264,7 @@ def _(
     two_column_panel(
         mo.vstack([pairing_mode, paired_results_table]),
         mo.vstack([paired_figure, paired_note]),
-        widths=(1.2, 2.8),
+        widths=(1, 1),
     )
 
 
@@ -2040,7 +2043,7 @@ def _(
         assert np.isclose(selected_anova["statistic"], 22.438016528925633)
         assert np.isclose(selected_anova["p_value"], 1.817713653668423e-06)
 
-    anova_figure, anova_axis = plt.subplots(figsize=FIGURE_SIZE_STANDARD)
+    anova_figure, anova_axis = plt.subplots(figsize=(5.2, 3.8))
     anova_jitter_rng = np.random.default_rng(82405)
     for _anova_tissue_index, (tissue_label, tissue_values, tissue_mean) in enumerate(
         zip(tissue_order, selected_anova["groups"], selected_anova["means"])
@@ -2157,7 +2160,7 @@ def _(
     two_column_panel(
         mo.vstack([anova_illumination, anova_source, anova_table]),
         mo.vstack([anova_figure, anova_report]),
-        widths=(1.35, 2.65),
+        widths=(1, 1),
     )
     return selected_anova, selected_peroxidase, tissue_order
 
