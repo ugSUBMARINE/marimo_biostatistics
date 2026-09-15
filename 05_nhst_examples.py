@@ -32,6 +32,7 @@ def _():
     import pandas as pd
     from scipy import stats
 
+    from companion_data import read_csv
     from companion_statistics import cohen_d_sample
     from companion_style import (
         COLORS,
@@ -55,6 +56,7 @@ def _():
         np,
         pd,
         plt,
+        read_csv,
         review_feedback,
         stats,
         two_column_panel,
@@ -62,11 +64,11 @@ def _():
 
 
 @app.cell
-def _(mo, np, pd):
+def _(mo, np, pd, read_csv):
     data_directory = mo.notebook_location() / "public"
-    rat_data = pd.read_csv(data_directory / "rat_data.csv", comment="#")
-    peroxidase_data = pd.read_csv(data_directory / "peroxidase.csv")
-    water_data = pd.read_csv(
+    rat_data = read_csv(data_directory / "rat_data.csv", comment="#")
+    peroxidase_data = read_csv(data_directory / "peroxidase.csv")
+    water_data = read_csv(
         data_directory / "Wasserqualitaet.csv", encoding="utf-8-sig"
     )
 

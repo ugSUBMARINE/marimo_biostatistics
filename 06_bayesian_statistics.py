@@ -29,6 +29,7 @@ def _():
     import pandas as pd
     from scipy import stats
 
+    from companion_data import read_csv
     from companion_statistics import cohen_d_sample
     from companion_style import (
         COLORS,
@@ -50,6 +51,7 @@ def _():
         np,
         pd,
         plt,
+        read_csv,
         review_feedback,
         stats,
         two_column_panel,
@@ -57,9 +59,9 @@ def _():
 
 
 @app.cell
-def _(mo, np, pd):
+def _(mo, np, pd, read_csv):
     water_path = mo.notebook_location() / "public" / "Wasserqualitaet.csv"
-    water_raw = pd.read_csv(water_path, encoding="utf-8-sig")
+    water_raw = read_csv(water_path, encoding="utf-8-sig")
     flow_column = "Fließgeschwindigkeit (m/s)"
     oxygen_column = "Sauerstoffkonzentration (mg/l)"
     assert {flow_column, oxygen_column}.issubset(water_raw.columns)

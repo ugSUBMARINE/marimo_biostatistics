@@ -29,6 +29,7 @@ def _():
     import pandas as pd
     from scipy import optimize, stats
 
+    from companion_data import read_csv
     from companion_statistics import cohen_d_sample
     from companion_style import (
         COLORS,
@@ -49,6 +50,7 @@ def _():
         optimize,
         pd,
         plt,
+        read_csv,
         review_feedback,
         stats,
         two_column_panel,
@@ -88,9 +90,9 @@ def _(mo):
 
 
 @app.cell
-def _(mo, np, pd, stats):
+def _(mo, np, pd, read_csv, stats):
     water_data_path = mo.notebook_location() / "public" / "Wasserqualitaet.csv"
-    raw_water_data = pd.read_csv(water_data_path, encoding="utf-8-sig")
+    raw_water_data = read_csv(water_data_path, encoding="utf-8-sig")
 
     german_to_english = {
         "Nummer des Flusses": "river_id",

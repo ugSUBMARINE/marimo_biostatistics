@@ -31,6 +31,7 @@ def _():
     import pandas as pd
     from scipy import stats
 
+    from companion_data import read_csv
     from companion_statistics import cohen_d_sample
     from companion_style import (
         COLORS,
@@ -53,6 +54,7 @@ def _():
         pd,
         plt,
         product,
+        read_csv,
         review_feedback,
         stats,
         two_column_panel,
@@ -90,9 +92,9 @@ def _(mo):
 
 
 @app.cell
-def _(mo, np, pd, stats):
+def _(mo, np, pd, read_csv, stats):
     height_data_path = mo.notebook_location() / "public" / "height_data.csv"
-    lecture_height_data = pd.read_csv(height_data_path)
+    lecture_height_data = read_csv(height_data_path)
     assert set(lecture_height_data.columns) == {"gender", "height"}
     assert len(lecture_height_data) == 97
     assert lecture_height_data["height"].notna().all()
