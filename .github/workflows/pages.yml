@@ -2,8 +2,8 @@ name: Deploy course website
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 permissions:
   contents: read
@@ -16,6 +16,8 @@ concurrency:
 jobs:
   build:
     name: Build notebooks
+    # Publish new version tags only, not tag updates or deletions.
+    if: github.event.created == true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -47,7 +49,6 @@ jobs:
 
   deploy:
     name: Deploy to GitHub Pages
-    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10

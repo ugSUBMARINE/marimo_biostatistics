@@ -69,13 +69,27 @@ separately from the notebook's CSS.
 ## Publishing updates
 
 The [GitHub Pages workflow](.github/workflows/pages.yml) builds and publishes the
-website on every push to `main`. It uses `.python-version` and `uv.lock` for the
-build environment and checks CSV loading before exporting the notebooks.
+website when a new version tag in the form `vMAJOR.MINOR.PATCH` (for example,
+`v0.1.0`) is pushed. Branch pushes, prerelease tags, and updates or deletions of
+existing tags do not deploy. There is no manual deployment trigger. The workflow
+uses `.python-version` and `uv.lock` for the build environment and checks CSV
+loading before exporting the notebooks.
 
-To update the website, edit the source files, commit, and push to `main`.
+To publish an update, commit and push the finished changes to `main`, then tag
+that commit with a new version number and push the tag. For example, from the
+updated `main` checkout:
+
+```sh
+git tag -a v0.1.0 -m "Release v0.1.0"
+git push origin v0.1.0
+```
+
+Choose an unused version number for each release. The tagged commit must include
+the updated workflow; that commit is what gets built and deployed.
+The repository's `github-pages` environment must allow deployment from `v*` tags;
+the workflow further restricts them to the version format above.
 Follow deployment progress in the repository's
 [Actions tab](https://github.com/ugSUBMARINE/marimo_biostatistics/actions).
-The **Deploy course website** workflow can also be run manually on `main`.
 After deployment, check the affected chapters and their controls in the browser.
 
 Keep dependency changes in `pyproject.toml` and `uv.lock` together. Commit source
