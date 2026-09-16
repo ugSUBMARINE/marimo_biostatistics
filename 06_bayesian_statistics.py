@@ -12,7 +12,22 @@
 import marimo
 
 __generated_with = "0.24.2"
-app = marimo.App(width="medium", app_title="Bayesian statistics")
+app = marimo.App(
+    width="medium",
+    app_title="Bayesian statistics",
+    css_file="site/assets/notebook.css",
+)
+
+
+@app.cell
+def chapter_header():
+    from companion_style import notebook_header
+
+    notebook_header(
+        6,
+        "Bayesian statistics",
+        "Updating uncertainty with data",
+    )
 
 
 @app.cell
@@ -378,10 +393,6 @@ def _(np, stats):
 @app.cell
 def _(mo):
     mo.md(r"""
-    # Bayesian statistics
-
-    ## Updating uncertainty with data
-
     Bayesian inference combines a probability model for unknown quantities with a
     likelihood for observed data. The result is a posterior distribution whose
     interpretation is always conditional on the model, prior, likelihood, and data.

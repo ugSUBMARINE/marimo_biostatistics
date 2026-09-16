@@ -12,7 +12,22 @@
 import marimo
 
 __generated_with = "0.24.2"
-app = marimo.App(width="medium", app_title="Inferential statistics")
+app = marimo.App(
+    width="medium",
+    app_title="Inferential statistics",
+    css_file="site/assets/notebook.css",
+)
+
+
+@app.cell
+def chapter_header():
+    from companion_style import notebook_header
+
+    notebook_header(
+        2,
+        "Inferential statistics",
+        "Samples, errors, and confidence",
+    )
 
 
 @app.cell
@@ -64,10 +79,6 @@ def _():
 @app.cell
 def _(mo):
     mo.md(r"""
-    # Inferential statistics
-
-    ## Samples, errors, and confidence
-
     Descriptive statistics summarize the observations in front of us. Inferential
     statistics asks a harder question: **what can this finite sample tell us about a
     wider population or about repetitions of the experiment that we did not observe?**

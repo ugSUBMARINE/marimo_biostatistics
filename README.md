@@ -40,9 +40,9 @@ files.
 ### Source files and generated output
 
 - `01_*.py`–`06_*.py`: notebook sources.
-- `public/`: CSV datasets used by the notebooks.
+- `public/`: CSV datasets and the shared University of Graz logo.
 - `companion_*.py`: shared data-loading, statistics, and presentation helpers.
-- `site/`: landing-page HTML and the University of Graz logo.
+- `site/`: landing-page HTML and the shared notebook stylesheet.
 - `_site/`: generated website, including notebook assets, datasets, and packaged
   helper modules. This directory is excluded from Git.
 
@@ -52,16 +52,44 @@ CSVs consistently in native Python and WebAssembly.
 The build script accepts an optional output directory and overwrites existing
 exports without removing older files. Use a new directory for a clean preview.
 
+### Notebook appearance
+
+All six notebooks load `site/assets/notebook.css` through `marimo.App(css_file=...)`.
+It uses the landing page's system font stack and defines shared heading sizes,
+prose spacing, and a responsive course masthead. The `notebook_header()` helper
+in `companion_style.py` supplies the logo, course label, chapter number, title,
+and subtitle. Keep the font stack aligned with `site/index.html` when editing it.
+
+Marimo embeds the stylesheet in HTML and WebAssembly exports; the build also
+copies `public/` so the logo works under the website's deployment subdirectory.
+After appearance changes, check native and WebAssembly views, including narrow
+screens and light/dark mode. Matplotlib figure typography is configured
+separately from the notebook's CSS.
+
 ## Publishing updates
 
 The [GitHub Pages workflow](.github/workflows/pages.yml) builds and publishes the
-website on every push to `main`. It uses `.python-version` and `uv.lock` for the
-build environment and checks CSV loading before exporting the notebooks.
+website when a new version tag in the form `vMAJOR.MINOR.PATCH` (for example,
+`v0.1.0`) is pushed. Branch pushes, prerelease tags, and updates or deletions of
+existing tags do not deploy. There is no manual deployment trigger. The workflow
+uses `.python-version` and `uv.lock` for the build environment and checks CSV
+loading before exporting the notebooks.
 
-To update the website, edit the source files, commit, and push to `main`.
+To publish an update, commit and push the finished changes to `main`, then tag
+that commit with a new version number and push the tag. For example, from the
+updated `main` checkout:
+
+```sh
+git tag -a v0.1.0 -m "Release v0.1.0"
+git push origin v0.1.0
+```
+
+Choose an unused version number for each release. The tagged commit must include
+the updated workflow; that commit is what gets built and deployed.
+The repository's `github-pages` environment must allow deployment from `v*` tags;
+the workflow further restricts them to the version format above.
 Follow deployment progress in the repository's
 [Actions tab](https://github.com/ugSUBMARINE/marimo_biostatistics/actions).
-The **Deploy course website** workflow can also be run manually on `main`.
 After deployment, check the affected chapters and their controls in the browser.
 
 Keep dependency changes in `pyproject.toml` and `uv.lock` together. Commit source

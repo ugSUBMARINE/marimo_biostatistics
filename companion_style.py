@@ -6,6 +6,7 @@ individual notebooks.
 """
 
 from collections.abc import Callable, Sequence
+from html import escape
 from typing import Any
 
 import marimo as mo
@@ -25,6 +26,29 @@ FIGURE_SIZE_STANDARD = (6.8, 3.8)
 FIGURE_SIZE_SHALLOW = (6.8, 3.4)
 FIGURE_SIZE_COMPACT = (5.8, 3.2)
 FIGURE_SIZE_LINKED = (7.6, 3.8)
+
+
+def notebook_header(chapter: int, title: str, subtitle: str) -> mo.Html:
+    """Render the shared course masthead in native and WebAssembly notebooks."""
+
+    logo = mo.image(
+        src=str(mo.notebook_location() / "public" / "university-of-graz-logo.jpg"),
+        alt="University of Graz",
+        width=210,
+        height="auto",
+    )
+    return mo.Html(
+        f'<header class="course-header">'
+        f'<div class="course-masthead">'
+        f'<p class="course-label">MOL.824UB · Biostatistics'
+        f"<span>Interactive lecture notebooks</span></p>"
+        f'<a class="course-university" href="https://www.uni-graz.at/en/">'
+        f"{logo.text}</a></div>"
+        f'<p class="course-chapter">Chapter {chapter:02d}</p>'
+        f"<h1>{escape(title)}</h1>"
+        f'<p class="course-subtitle">{escape(subtitle)}</p>'
+        f"</header>"
+    )
 
 
 def two_column_panel(
@@ -120,6 +144,7 @@ __all__ = [
     "FIGURE_SIZE_STANDARD",
     "compact_table",
     "dataset_action_buttons",
+    "notebook_header",
     "review_feedback",
     "two_column_panel",
 ]
