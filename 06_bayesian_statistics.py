@@ -45,7 +45,6 @@ def _():
     from scipy import stats
 
     from companion_data import read_csv
-    from companion_statistics import cohen_d_sample
     from companion_style import (
         COLORS,
         FIGURE_SIZE_LINKED,
@@ -61,7 +60,6 @@ def _():
         FIGURE_SIZE_LINKED,
         FIGURE_SIZE_SHALLOW,
         FIGURE_SIZE_STANDARD,
-        cohen_d_sample,
         compact_table,
         np,
         pd,
