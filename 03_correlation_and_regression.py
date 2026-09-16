@@ -12,7 +12,22 @@
 import marimo
 
 __generated_with = "0.24.2"
-app = marimo.App(width="medium", app_title="Correlation and regression")
+app = marimo.App(
+    width="medium",
+    app_title="Correlation and regression",
+    css_file="site/assets/notebook.css",
+)
+
+
+@app.cell
+def chapter_header():
+    from companion_style import notebook_header
+
+    notebook_header(
+        3,
+        "Correlation and regression",
+        "Learning from paired measurements of river water quality",
+    )
 
 
 @app.cell
@@ -60,10 +75,6 @@ def _():
 @app.cell
 def _(mo):
     mo.md(r"""
-    # Correlation and regression
-
-    ## Learning from paired measurements of river water quality
-
     A single variable has a distribution. When two measurements are recorded on the
     same observation unit, we can also ask whether and how they vary together. This
     chapter develops two related but different tools:

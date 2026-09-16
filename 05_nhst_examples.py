@@ -12,7 +12,22 @@
 import marimo
 
 __generated_with = "0.24.2"
-app = marimo.App(width="medium", app_title="NHST examples")
+app = marimo.App(
+    width="medium",
+    app_title="NHST examples",
+    css_file="site/assets/notebook.css",
+)
+
+
+@app.cell
+def chapter_header():
+    from companion_style import notebook_header
+
+    notebook_header(
+        5,
+        "Null-hypothesis significance testing",
+        "Examples: groups, counts, ranks, and analysis of variance",
+    )
 
 
 @app.cell
@@ -68,9 +83,7 @@ def _(mo, np, pd, read_csv):
     data_directory = mo.notebook_location() / "public"
     rat_data = read_csv(data_directory / "rat_data.csv", comment="#")
     peroxidase_data = read_csv(data_directory / "peroxidase.csv")
-    water_data = read_csv(
-        data_directory / "Wasserqualitaet.csv", encoding="utf-8-sig"
-    )
+    water_data = read_csv(data_directory / "Wasserqualitaet.csv", encoding="utf-8-sig")
 
     assert list(rat_data.columns) == ["age", "relax"]
     assert len(rat_data) == 17
@@ -357,10 +370,6 @@ def _(comb, combinations, np, stats):
 @app.cell
 def _(mo):
     mo.md(r"""
-    # Null-hypothesis significance testing
-
-    ## Examples: groups, counts, ranks, and analysis of variance
-
     Chapter 4 developed the logic of a null model. This chapter applies that logic
     to common biological designs while keeping the **estimated effect, uncertainty,
     raw observations, and assumptions** beside every test result.
@@ -2537,13 +2546,13 @@ def _(
         ylim=(0, 1.02),
     )
     multiplicity_axis.grid(linestyle=":", alpha=0.35)
-    multiplicity_axis.legend(frameon=False, fontsize=8, loc="lower right")
+    multiplicity_axis.legend(frameon=False, fontsize=8, loc="center right")
     multiplicity_figure.tight_layout()
 
     multiplicity_note = mo.callout(
         mo.md(
             f"For {multiplicity_m_value} independent true-null tests at "
-            f"$\alpha={multiplicity_alpha_value:.2f}$, the illustrative chance of "
+            f"$\\alpha={multiplicity_alpha_value:.2f}$, the illustrative chance of "
             f"at least one false positive is **{multiplicity_fwer:.1%}**. "
             "Bonferroni and Holm control the probability of any false positive. "
             "Benjamini–Hochberg instead controls the expected false-discovery proportion among rejections, often a more useful goal in omics."

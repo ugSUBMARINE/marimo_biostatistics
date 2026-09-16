@@ -40,9 +40,9 @@ files.
 ### Source files and generated output
 
 - `01_*.py`–`06_*.py`: notebook sources.
-- `public/`: CSV datasets used by the notebooks.
+- `public/`: CSV datasets and the shared University of Graz logo.
 - `companion_*.py`: shared data-loading, statistics, and presentation helpers.
-- `site/`: landing-page HTML and the University of Graz logo.
+- `site/`: landing-page HTML and the shared notebook stylesheet.
 - `_site/`: generated website, including notebook assets, datasets, and packaged
   helper modules. This directory is excluded from Git.
 
@@ -51,6 +51,20 @@ CSVs consistently in native Python and WebAssembly.
 
 The build script accepts an optional output directory and overwrites existing
 exports without removing older files. Use a new directory for a clean preview.
+
+### Notebook appearance
+
+All six notebooks load `site/assets/notebook.css` through `marimo.App(css_file=...)`.
+It uses the landing page's system font stack and defines shared heading sizes,
+prose spacing, and a responsive course masthead. The `notebook_header()` helper
+in `companion_style.py` supplies the logo, course label, chapter number, title,
+and subtitle. Keep the font stack aligned with `site/index.html` when editing it.
+
+Marimo embeds the stylesheet in HTML and WebAssembly exports; the build also
+copies `public/` so the logo works under the website's deployment subdirectory.
+After appearance changes, check native and WebAssembly views, including narrow
+screens and light/dark mode. Matplotlib figure typography is configured
+separately from the notebook's CSS.
 
 ## Publishing updates
 

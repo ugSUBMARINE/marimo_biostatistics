@@ -12,7 +12,22 @@
 import marimo
 
 __generated_with = "0.24.2"
-app = marimo.App(width="medium", app_title="Descriptive statistics")
+app = marimo.App(
+    width="medium",
+    app_title="Descriptive statistics",
+    css_file="site/assets/notebook.css",
+)
+
+
+@app.cell
+def chapter_header():
+    from companion_style import notebook_header
+
+    notebook_header(
+        1,
+        "Descriptive statistics",
+        "Learning from a dataset of student heights",
+    )
 
 
 @app.cell
@@ -65,10 +80,6 @@ def _():
 @app.cell
 def _(mo):
     mo.md(r"""
-    # Descriptive statistics
-
-    ## Learning from a dataset of student heights
-
     A dataset is usually too detailed to understand by inspection alone. Descriptive
     statistics help us answer three complementary questions:
 

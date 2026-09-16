@@ -12,7 +12,22 @@
 import marimo
 
 __generated_with = "0.24.2"
-app = marimo.App(width="medium", app_title="NHST foundations")
+app = marimo.App(
+    width="medium",
+    app_title="NHST foundations",
+    css_file="site/assets/notebook.css",
+)
+
+
+@app.cell
+def chapter_header():
+    from companion_style import notebook_header
+
+    notebook_header(
+        4,
+        "Null-hypothesis significance testing",
+        "Foundations: null models, p-values, decisions, and power",
+    )
 
 
 @app.cell
@@ -237,10 +252,6 @@ def _(np, stats):
 @app.cell
 def _(mo):
     mo.md(r"""
-    # Null-hypothesis significance testing
-
-    ## Foundations: null models, p-values, decisions, and power
-
     Null-hypothesis significance testing asks how compatible an observed statistic is
     with a specified **null model**. It does not assign probabilities to hypotheses,
     and it cannot replace careful design, effect estimates, or uncertainty intervals.

@@ -1,0 +1,111 @@
+/* Shared course typography. Keep the font stack aligned with site/index.html.
+   Marimo embeds this stylesheet when exporting HTML and WebAssembly notebooks. */
+:root {
+  --marimo-text-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --marimo-heading-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --course-ink: light-dark(#202621, #eef1eb);
+  --course-muted: light-dark(#5a625c, #b9c3bb);
+  --course-line: light-dark(#dfe3dc, #465149);
+  --course-green: light-dark(#254f40, #afd3bd);
+  --course-yellow: #ffdf00;
+}
+
+/* Scope prose spacing to notebook outputs; leave editor and widget controls alone. */
+[data-cell-name] .markdown {
+  font-family: var(--marimo-text-font);
+  line-height: 1.65;
+}
+
+[data-cell-name] .markdown :is(h1, h2, h3, h4) {
+  font-family: var(--marimo-heading-font);
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  margin-block: 1.5em 0.65em;
+}
+
+[data-cell-name] .markdown h2 { font-size: 1.5rem; }
+[data-cell-name] .markdown h3 { font-size: 1.2rem; }
+[data-cell-name] .markdown > :is(h1, h2, h3, h4):first-child {
+  margin-top: 0.35em;
+}
+[data-cell-name] .markdown :is(p, .paragraph, ul, ol) {
+  margin-block: 0.75em;
+}
+
+.course-header {
+  color: var(--course-ink);
+  font-family: var(--marimo-text-font);
+  line-height: 1.6;
+  border-top: 4px solid var(--course-yellow);
+  border-bottom: 1px solid var(--course-line);
+  padding-block: 18px 22px;
+  margin-bottom: 8px;
+}
+.course-header .course-masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.course-header .course-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+.course-header .course-label span {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--course-muted);
+}
+.course-header .course-university {
+  display: block;
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 3px;
+  padding: 8px;
+}
+.course-header .course-university img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.course-header .course-university:focus-visible {
+  outline: 3px solid var(--course-green);
+  outline-offset: 4px;
+}
+.course-header .course-chapter {
+  margin: 0 0 8px;
+  color: var(--course-green);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.course-header h1 {
+  margin: 0;
+  font-family: var(--marimo-heading-font);
+  font-size: clamp(1.8rem, 4vw, 2.35rem);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+.course-header .course-subtitle {
+  margin: 10px 0 0;
+  color: var(--course-muted);
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 540px) {
+  .course-header .course-masthead {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .course-header .course-university img { width: 180px; }
+}
