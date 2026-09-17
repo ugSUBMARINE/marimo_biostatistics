@@ -420,8 +420,8 @@ def _(mo):
     answer below. Ask what varies: the interval across repeated samples, or the
     unknown parameter in a posterior distribution conditional on this model and
     these data? The radio buttons reveal feedback; they do not recalculate either
-    interval. The numerical bounds in the quiz are illustrative, not the table's
-    calculated endpoints.
+    interval. Classify the two probability statements independently of the
+    numerical endpoints.
     """)
 
 
@@ -442,7 +442,7 @@ def _(compact_table, mo, pd, stats):
                     f"{bayesian_interval[0]:.3f} to {bayesian_interval[1]:.3f}",
                 ],
                 "Interpretation": [
-                    "Procedure has 95% long-run coverage",
+                    "Procedure has at least 95% long-run coverage",
                     "95% posterior probability for p in this interval",
                 ],
             }
@@ -457,7 +457,9 @@ def _(compact_table, mo, pd, stats):
                 mo.md(
                     "The Bayesian interval uses a uniform $\\operatorname{Beta}(1,1)$ prior and a "
                     "$\\operatorname{Beta}(4,8)$ posterior. Numerical resemblance does not make the "
-                    "two interpretations interchangeable."
+                    "two interpretations interchangeable. The exact binomial confidence "
+                    "interval is conservative: its coverage is at least 95%, not "
+                    "exactly 95% for every prevalence."
                 ),
                 kind="info",
             ),
@@ -469,13 +471,13 @@ def _(compact_table, mo, pd, stats):
 def _(mo):
     probability_statement = mo.ui.radio(
         {
-            "Across repeated studies, 95% of intervals made this way cover p": "frequentist",
-            "Given this model and data, P(0.1 < p < 0.6) is 0.95": "bayesian",
-            "The observed data have a 95% probability of being true": "ill_posed",
-            "Either of the first two, depending on the stated framework": "either",
+            "A is frequentist; B is Bayesian": "frameworks",
+            "A is Bayesian; B is frequentist": "reversed",
+            "Both are frequentist": "both_frequentist",
+            "Both are Bayesian": "both_bayesian",
         },
         value=None,
-        label="Which option correctly classifies the first two statements?",
+        label="Which classification is correct?",
     )
     return (probability_statement,)
 
@@ -484,12 +486,28 @@ def _(mo):
 def _(mo, probability_statement, review_feedback):
     mo.vstack(
         [
+            mo.md(
+                "**A.** Under repeated sampling, this exact binomial interval procedure "
+                "covers the fixed prevalence p at least 95% of the time.\n\n"
+                "**B.** Given the model, prior, and observed data, 95% of the posterior "
+                "probability for p lies inside the reported credible interval."
+            ),
             probability_statement,
             review_feedback(
                 probability_statement.value,
-                correct_value="either",
-                correct_text="**Correct.** The first is a frequentist coverage statement and the second is a Bayesian posterior statement.",
-                incorrect_text="The two valid statements use different probability targets; truth of the observed data is not a random event in either analysis.",
+                correct_value="frameworks",
+                correct_text="**Correct.** A describes coverage of changing intervals across repeated samples with p fixed. B describes posterior uncertainty about p conditional on the observed data, prior, and model. Similar numerical endpoints do not make those probability statements interchangeable.",
+                incorrect_text={
+                    "reversed": "The classifications are reversed. Statement A concerns the long-run coverage of "
+                    "intervals under repeated sampling; statement B concerns posterior uncertainty about "
+                    "p after conditioning on data and a model.",
+                    "both_frequentist": "A is frequentist, but B assigns probability to the parameter after observing "
+                    "the data. That is a Bayesian posterior statement, requiring a model and "
+                    "prior.",
+                    "both_bayesian": "B is Bayesian, but A concerns repeated use of an interval procedure with the "
+                    "parameter fixed. That is a frequentist coverage statement, not posterior "
+                    "probability for one interval.",
+                },
             ),
         ]
     )
@@ -1930,7 +1948,7 @@ def _(mo):
 def _(mo):
     audit_choice = mo.ui.radio(
         {
-            "The chains have R-hat near one, so no further checks are needed": "diagnostics_only",
+            "The chains have split R-hat near one, so no further checks are needed": "diagnostics_only",
             "Inspect prior predictions, computation, posterior predictions, and sensitivity": "full_workflow",
             "Use a wider prior until the posterior becomes more certain": "wider",
         },
@@ -1949,6 +1967,7 @@ def _(
     np,
     plt,
     regression_mcmc,
+    review_feedback,
     two_column_panel,
 ):
     prior_rng = np.random.default_rng(8240602)
@@ -1991,19 +2010,14 @@ def _(
     prior_axis.grid(linestyle=":", alpha=0.25)
     prior_axis.legend(frameon=False, fontsize=8)
     prior_figure.tight_layout()
-    audit_feedback = mo.callout(
-        mo.md(
-            "Select an answer above."
-            if audit_choice.value is None
-            else "**Correct.** Diagnostics address computation; model checking and sensitivity address different failure modes."
-            if audit_choice.value == "full_workflow"
-            else "Computational convergence cannot validate the likelihood, prior, measurements, or scientific design."
-        ),
-        kind="neutral"
-        if audit_choice.value is None
-        else "success"
-        if audit_choice.value == "full_workflow"
-        else "danger",
+    audit_feedback = review_feedback(
+        audit_choice.value,
+        correct_value="full_workflow",
+        correct_text="**Correct.** Prior predictions assess what the model permits before seeing data; chain diagnostics assess computation; posterior predictions assess fit; and sensitivity checks assess dependence on defensible modeling choices. No single check replaces the others.",
+        incorrect_text={
+            "diagnostics_only": "Split R-hat near one indicates agreement between chains, not that the scientific model is appropriate. Chains can agree while sampling a misspecified model; check predictions, design, and sensitivity as well.",
+            "wider": "A wider prior allows more parameter values; it does not guarantee a more certain or more credible posterior. Inspect prior predictions and justify alternatives scientifically rather than choosing a prior to force precision.",
+        },
     )
     prior_note = mo.callout(
         mo.md(
@@ -2056,7 +2070,7 @@ def _(mo):
         {
             "95% of individual people have prevalence values in the interval": "individual",
             "Given the model, prior, and data, p has 95% posterior probability in the interval": "posterior",
-            "The procedure must cover p in this particular dataset": "coverage",
+            "Any 95% credible-interval procedure also has exactly 95% repeated-sampling coverage": "coverage",
         },
         value=None,
         label="Choose one answer",
@@ -2102,28 +2116,41 @@ def _(
         mo.vstack(
             [
                 mo.md(
-                    "**1. For a rare disease, which conditional probability answers whether a positive result represents disease and therefore changes with prevalence?**"
+                    "**1. Holding sensitivity and specificity fixed, which probability answers ‘Given a positive test, how likely is disease?’ and changes with prevalence?**"
                 ),
                 review_conditioning,
                 review_feedback(
                     review_conditioning.value,
                     correct_value="ppv",
                     correct_text="**Correct.** PPV is P(sick | positive); its denominator mixes true and false positives in proportions set partly by prevalence.",
-                    incorrect_text="Sensitivity and specificity condition on disease status. PPV reverses the conditioning and depends on the population mix.",
+                    incorrect_text={
+                        "sensitivity": "Sensitivity asks how often the test is positive among people with disease. The "
+                        "question starts with a positive result and asks about disease status, so it "
+                        "requires PPV and the prevalence as well as test performance.",
+                        "specificity": "Specificity asks how often the test is negative among healthy people. It helps "
+                        "determine false positives, but the probability of disease after a positive result "
+                        "is PPV.",
+                    },
                 ),
             ]
         ),
         mo.vstack(
             [
                 mo.md(
-                    "**2. What happens to the dice hypotheses immediately after a revealed roll of 8?**"
+                    "**2. Start with positive prior probabilities for the fair d4, d6, d8, d12, and d20. After a first roll of 8, which hypotheses receive zero posterior probability?**"
                 ),
                 review_sequential,
                 review_feedback(
                     review_sequential.value,
                     correct_value="impossible_dice",
                     correct_text="**Correct.** A roll of 8 has zero likelihood under d4 and d6, so their posterior probabilities become zero.",
-                    incorrect_text="Sequential updating eliminates only hypotheses under which the observation is impossible; d8, d12, and d20 remain possible.",
+                    incorrect_text={
+                        "uniform_again": "The new likelihood reweights the current probabilities; it does not reset the "
+                        "prior. A roll of 8 has zero probability under d4 and d6, and likelihoods 1/8, "
+                        "1/12, and 1/20 under the surviving dice.",
+                        "only_d20": "The d8 and d12 can also produce an 8. With positive prior probabilities, all of d8, "
+                        "d12, and d20 survive; only d4 and d6 assign zero likelihood to this roll.",
+                    },
                 ),
             ]
         ),
@@ -2137,35 +2164,56 @@ def _(
                     review_credible.value,
                     correct_value="posterior",
                     correct_text="**Correct.** The probability statement is conditional on the specified model, prior, and observed data.",
-                    incorrect_text="A parameter interval does not describe individual people, and frequentist coverage is a different statement.",
+                    incorrect_text={
+                        "individual": "Prevalence p is a population proportion, not a different numerical value carried "
+                        "by each person. The interval expresses uncertainty about that proportion, not "
+                        "variation among individual disease outcomes.",
+                        "coverage": "Repeated-sampling coverage and posterior probability are different properties. A 95% "
+                        "credible interval contains 95% of the posterior mass given this model, prior, and "
+                        "data; it does not automatically have 95% frequentist coverage.",
+                    },
                 ),
             ]
         ),
         mo.vstack(
             [
                 mo.md(
-                    "**4. Which trace behavior most clearly warns against trusting the combined MCMC histogram?**"
+                    "**4. Which finding after warmup most clearly warns against trusting the combined MCMC histogram?**"
                 ),
                 review_mcmc,
                 review_feedback(
                     review_mcmc.value,
                     correct_value="separated",
-                    correct_text="**Correct.** Persistent between-chain disagreement indicates that the chains have not explored the same stationary distribution.",
-                    incorrect_text="A smooth histogram or an acceptance rate different from one arbitrary target does not establish convergence failure by itself.",
+                    correct_text="**Correct.** Persistent separation after warmup suggests that chains have not adequately explored the same posterior. Pooling them can conceal poor mixing; inspect traces, split R-hat, and effective sample sizes before relying on the summary.",
+                    incorrect_text={
+                        "smooth": "Histogram smoothness depends partly on binning and draw count. A smooth pooled "
+                        "histogram can still hide chains trapped in different regions; compare their traces, "
+                        "split R-hat, and effective sample sizes.",
+                        "acceptance": "There is no universal requirement of exactly 50% acceptance. Tiny steps may be "
+                        "accepted often yet mix poorly, and suitable acceptance rates depend on the "
+                        "proposal and target. Assess exploration and effective sample size together.",
+                    },
                 ),
             ]
         ),
         mo.vstack(
             [
                 mo.md(
-                    "**5. Why is a posterior predictive interval wider than a credible band for the mean line?**"
+                    "**5. In this Gaussian regression example, at the same flow speed and probability level, why is a posterior predictive interval generally wider than the credible interval for the mean response?**"
                 ),
                 review_prediction,
                 review_feedback(
                     review_prediction.value,
                     correct_value="residual",
                     correct_text="**Correct.** Prediction combines uncertainty in the mean response with observation-to-observation residual scatter.",
-                    incorrect_text="The width reflects additional residual variability, not fewer samples or removal of parameter uncertainty.",
+                    incorrect_text={
+                        "fewer": "Using fewer draws affects Monte Carlo precision, not the target interval’s source of "
+                        "uncertainty. The predictive distribution is wider here because it includes "
+                        "new-observation noise as well as parameter uncertainty.",
+                        "removes": "Posterior prediction retains uncertainty in the fitted mean and adds variation of a "
+                        "new observation around that mean. Removing parameter uncertainty would omit a source "
+                        "of variation rather than explain the wider interval.",
+                    },
                 ),
             ]
         ),

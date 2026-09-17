@@ -2759,7 +2759,14 @@ def _(review_feedback, review_question_1):
         review_question_1.value,
         correct_value="plot_first",
         correct_text="**Correct.** Identical numerical summaries can accompany linear, curved, clustered, or outlier-driven patterns.",
-        incorrect_text="A correlation coefficient and marginal summaries discard the geometry of the paired observations. The scatter plot is needed to reveal curvature, clusters, and influential points.",
+        incorrect_text={
+            "coefficient_only": "The quartet has nearly identical r values despite very different point "
+            "patterns. A single linear-association coefficient cannot reveal curvature or "
+            "show that one point drives the fit.",
+            "means_only": "Means locate the centers of the separate variables, but do not show how x and y "
+            "are paired. The quartet also has nearly identical means; its scatter plots reveal "
+            "the differences.",
+        },
     )
 
 
@@ -2777,7 +2784,7 @@ def _(mo):
     mo.vstack(
         [
             mo.md(
-                "**2. Which coefficient is the more natural summary for a curved but monotonic relationship measured on an ordinal scale?**"
+                "**2. Two ordinal scores tend to increase together, but the distances between score levels are not meaningful. Which coefficient naturally summarizes this monotonic association?**"
             ),
             review_question_2,
         ]
@@ -2791,7 +2798,13 @@ def _(review_feedback, review_question_2):
         review_question_2.value,
         correct_value="spearman",
         correct_text="**Correct.** Spearman correlation uses ranks and measures monotonic association without requiring metric distances or a straight-line relationship.",
-        incorrect_text="Pearson correlation summarizes linear association between metric values. For ordinal values in a monotonic relationship, average ranks and Spearman correlation are more appropriate.",
+        incorrect_text={
+            "pearson": "Pearson uses numerical distances between values and summarizes linear association. "
+            "Arbitrary numerical codes for ordinal categories do not supply meaningful distances; "
+            "Spearman uses their ordering instead.",
+            "neither": "Spearman is designed to summarize monotonic association through ranks, even when "
+            "numerical spacing is not meaningful. Tied categories receive average ranks.",
+        },
     )
 
 
@@ -2823,7 +2836,14 @@ def _(review_feedback, review_question_3):
         review_question_3.value,
         correct_value="prediction_interval",
         correct_text="**Correct.** A prediction interval includes uncertainty in the fitted mean and residual variation among individual observations.",
-        incorrect_text="A confidence interval for the conditional mean addresses an average response. A new individual observation also varies around that mean, requiring the wider prediction interval.",
+        incorrect_text={
+            "mean_interval": "A confidence interval for the conditional mean addresses average oxygen at that "
+            "flow speed. A new river also varies around that mean, so its prediction "
+            "interval includes residual scatter.",
+            "point_only": "The fitted value is a point prediction and expresses no uncertainty. A prediction "
+            "interval includes uncertainty in the fitted mean plus variation of a new "
+            "observation around it.",
+        },
     )
 
 
@@ -2855,7 +2875,13 @@ def _(review_feedback, review_question_4):
         review_question_4.value,
         correct_value="model_statement",
         correct_text="**Correct.** $R^2$ describes the share of observed response variation accounted for by the fitted model, not a causal percentage or a fraction of observations.",
-        incorrect_text="$R^2$ is a model summary. It neither establishes causation nor counts how many observations belong to a category.",
+        incorrect_text={
+            "causal": "R² describes the fitted model’s reduction in squared residual variation in this "
+            "sample. An observational association does not show that intervening on flow speed "
+            "would cause a corresponding oxygen change.",
+            "river_fraction": "The 46% refers to a proportion of squared variation in oxygen, not a count of "
+            "rivers. No threshold defining “high oxygen” enters the calculation of R².",
+        },
     )
 
 
@@ -2886,8 +2912,14 @@ def _(review_feedback, review_question_5):
     review_feedback(
         review_question_5.value,
         correct_value="conditional",
-        correct_text="**Correct.** Adjustment describes a conditional linear association. Calling distance a causal confounder requires a defensible causal and biological argument.",
-        incorrect_text="A smaller partial correlation does not prove a causal role for distance, and a nonzero or statistically uncertain correlation is not the same as independence.",
+        correct_text="**Correct.** Partial correlation measures the association between the residuals after linearly regressing each variable on distance. The smaller coefficient describes less remaining linear association; it does not establish a causal explanation.",
+        incorrect_text={
+            "proven": "The reduction shows that linear adjustment removes part of the shared pattern. It does "
+            "not establish distance’s causal role; that requires knowledge of the processes and a "
+            "defensible causal model.",
+            "independent": "The residual correlation is still 0.337, not zero. Even zero correlation would "
+            "generally rule out only linear association, not every form of dependence.",
+        },
     )
 
 

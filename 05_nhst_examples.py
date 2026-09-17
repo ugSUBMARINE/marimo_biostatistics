@@ -1283,12 +1283,12 @@ def _(
 def _(mo):
     paired_checkpoint = mo.ui.radio(
         {
-            "Different animals receive treatment and control": "independent",
+            "Unmatched animals are individually randomized to treatment or control": "independent",
             "Each patient is measured before and after treatment": "paired",
             "Wells are matched only because they share a plate number": "design",
         },
         value=None,
-        label="Choose the design that necessarily requires a paired analysis",
+        label="Which design directly supports a within-patient paired comparison?",
     )
     mo.vstack(
         [
@@ -1304,8 +1304,16 @@ def _(paired_checkpoint, review_feedback):
     review_feedback(
         paired_checkpoint.value,
         correct_value="paired",
-        correct_text="**Correct.** Repeated measurements on the same patient define a within-patient difference.",
-        incorrect_text="Pairing must follow a meaningful unit-level link in the design. Different animals are independent; a shared batch may require blocking or a hierarchical model, not an invented pair.",
+        correct_text="**Correct.** Each patient supplies a before–after difference. A paired t analysis treats those differences as the observations and requires independence between patients, not between the two measurements within a patient.",
+        incorrect_text={
+            "independent": "Individually assigned animals without matching provide separate observation "
+            "units, not one before–after difference per animal. Use an independent-group "
+            "analysis when the design supports independence.",
+            "design": "Sharing a plate can create a batch effect, but it does not define which treated well "
+            "is paired with which control well. A paired comparison needs a scientifically "
+            "specified unit-level match; plate effects may instead require blocking or a "
+            "hierarchical model.",
+        },
     )
 
 
@@ -1647,8 +1655,8 @@ def _(mo):
     illustrating sensitivity rather than a plausible measurement. Compare the
     mean-based results with Mann–Whitney: once that observation is the largest,
     increasing its magnitude does not further increase its rank. Use the design
-    question to identify when independent-group ranks or paired signed ranks
-    would be appropriate. The answer reveals feedback; it does not switch the
+    question to identify the design needed for the Mann–Whitney comparison
+    shown here. The feedback also explains the paired alternative; it does not switch the
     analysis of the rat data. Only this activity uses the modified observation.
     """)
 
@@ -1668,10 +1676,10 @@ def _(mo):
         {
             "Independent animals in two groups": "mann_whitney",
             "Before/after measurements on the same animals": "wilcoxon",
-            "Two percentages with no underlying counts": "invalid",
+            "Only two group-average percentages, without unit-level measurements": "invalid",
         },
         value=None,
-        label="Choose the appropriate rank design",
+        label="Which data support the independent-group Mann–Whitney comparison shown here?",
     )
     return rank_design, rank_outlier_value
 
@@ -1690,6 +1698,7 @@ def _(
     rank_outlier_value,
     rat_old,
     rat_young,
+    review_feedback,
     stats,
     two_column_panel,
 ):
@@ -1762,22 +1771,15 @@ def _(
     rank_axis.legend(frameon=False, fontsize=8)
     rank_figure.tight_layout()
 
-    rank_design_feedback = (
-        mo.callout(
-            mo.md(
-                "**Correct:** Mann–Whitney is the rank procedure for two independent groups."
-            ),
-            kind="success",
-        )
-        if rank_design.value == "mann_whitney"
-        else mo.callout(
-            mo.md(
-                "Repeated measurements require a paired procedure such as Wilcoxon signed-rank; percentages without their counts do not supply the sampling information needed for a count test."
-            ),
-            kind="danger",
-        )
-        if rank_design.value is not None
-        else mo.callout(mo.md("Select a design above."), kind="neutral")
+    rank_design_feedback = review_feedback(
+        rank_design.value,
+        correct_value="mann_whitney",
+        correct_text="**Correct.** Mann–Whitney ranks unit-level measurements from two independent groups. It compares relative ordering; interpreting it solely as a location or median shift requires additional distributional assumptions.",
+        incorrect_text={
+            "wilcoxon": "Before and after measurements on the same animals are paired, so an independent-group Mann–Whitney analysis would ignore their link. Wilcoxon signed-rank works on within-animal differences and, for a location interpretation, assumes their distribution is symmetric.",
+            "invalid": "Two group averages do not provide the individual observations needed to construct and compare ranks. Percentage-valued measurements can be ranked if they are recorded for independent units; the problem here is missing unit-level data, not the percentage scale itself.",
+        },
+        unanswered_text="Choose a design above.",
     )
     rank_note = mo.callout(
         mo.md(
@@ -2991,7 +2993,7 @@ def _(mo):
 def _(mo):
     review_two_group = mo.ui.radio(
         {
-            "Young rats average 23.55 percentage points more relaxation, with plausible mean differences from 9.59 to 37.50": "estimate",
+            "Estimated young-minus-old mean difference: 23.55 percentage points (95% Welch CI 9.59 to 37.50)": "estimate",
             "There is a 95% probability that the true difference lies between 9.59 and 37.50": "posterior",
             "95% of individual young rats exceed all old rats by 9.59 to 37.50 points": "individual",
         },
@@ -3001,7 +3003,7 @@ def _(mo):
     review_assumptions = mo.ui.radio(
         {
             "A Q–Q plot can prove observations are independent": "plot_proves",
-            "Independence follows primarily from the sampling and assignment design": "design",
+            "Independence must be justified from the observation units, design, and process": "design",
             "Passing a normality test guarantees the t model is correct": "normality_gate",
         },
         value=None,
@@ -3009,9 +3011,9 @@ def _(mo):
     )
     review_pairing = mo.ui.radio(
         {
-            "The number of individual measurements": "measurements",
-            "The number of complete independent pairs": "pairs",
-            "Twice the number of pairs": "twice",
+            "n = 24 observations; df = 23": "measurements",
+            "n = 12 differences; df = 11": "pairs",
+            "n = 24 observations; df = 22": "twice",
         },
         value=None,
         label="Choose one answer",
@@ -3019,7 +3021,7 @@ def _(mo):
     review_anova = mo.ui.radio(
         {
             "Every tissue mean differs from every other tissue mean": "all_pairs",
-            "At least one population tissue mean differs under the model": "omnibus",
+            "There is evidence against equality of all population tissue means under the model": "omnibus",
             "The null hypothesis has probability 0.000002": "null_probability",
         },
         value=None,
@@ -3063,8 +3065,15 @@ def _(
                 review_feedback(
                     review_two_group.value,
                     correct_value="estimate",
-                    correct_text="**Correct.** The estimate and interval concern the population mean difference in percentage-point units.",
-                    incorrect_text="A frequentist interval has long-run coverage; it is not a posterior probability and does not describe individual separation.",
+                    correct_text="**Correct.** State the direction (young minus old), estimate, units, and uncertainty. The 95% Welch interval concerns a population mean difference and has approximately 95% repeated-sampling coverage under its assumptions; it does not describe individual rats.",
+                    incorrect_text={
+                        "posterior": "The Welch interval is frequentist: its repeated-sampling procedure has "
+                        "approximately 95% coverage under its assumptions. A 95% posterior probability would "
+                        "require a Bayesian analysis with a stated prior.",
+                        "individual": "The interval concerns a population mean difference, not all pairwise differences "
+                        "between individual rats. Groups can overlap substantially even when the confidence "
+                        "interval for their mean difference excludes zero.",
+                    },
                 ),
             ]
         ),
@@ -3076,49 +3085,76 @@ def _(
                     review_assumptions.value,
                     correct_value="design",
                     correct_text="**Correct.** Independence is justified by the observation units, sampling, allocation, and data-generating process.",
-                    incorrect_text="Distribution diagnostics cannot establish independence, and a preliminary p-value does not certify an entire model.",
+                    incorrect_text={
+                        "plot_proves": "A Q–Q plot assesses marginal distributional shape, not whether one observation "
+                        "depends on another. Measurements can look normal while sharing an animal, cage, "
+                        "or batch.",
+                        "normality_gate": "Failure to reject normality is not proof of normality, especially in a small "
+                        "sample. It also says nothing about independence, allocation, or whether the "
+                        "chosen comparison answers the scientific question.",
+                    },
                 ),
             ]
         ),
         mo.vstack(
             [
                 mo.md(
-                    "**3. What determines the sample size and degrees of freedom in a paired t-test?**"
+                    "**3. Twelve independent patients each have a before and an after measurement, with no missing values. What are n and the degrees of freedom for a paired t test?**"
                 ),
                 review_pairing,
                 review_feedback(
                     review_pairing.value,
                     correct_value="pairs",
-                    correct_text="**Correct.** Each complete pair yields one difference; with n pairs, the paired t-test has n − 1 degrees of freedom.",
-                    incorrect_text="The paired analysis operates on one difference per independent pair, not on the raw measurement count.",
+                    correct_text="**Correct.** The 24 raw measurements form 12 within-patient differences. Estimating their mean leaves 12 − 1 = 11 degrees of freedom for the SD used in the paired t statistic.",
+                    incorrect_text={
+                        "measurements": "There are 24 measurements but only 12 independent within-patient differences. "
+                        "The paired t statistic uses the SD of those 12 differences and has 12 − 1 = 11 "
+                        "degrees of freedom.",
+                        "twice": "The 22 degrees of freedom would describe a pooled independent two-group test with 12 "
+                        "observations per group. Before and after measurements on the same patients are paired, "
+                        "so analyze 12 differences with 11 degrees of freedom.",
+                    },
                 ),
             ]
         ),
         mo.vstack(
             [
                 mo.md(
-                    "**4. What follows from the light-condition one-way ANOVA p-value?**"
+                    "**4. For the light-grown subset, the one-way ANOVA gives p ≈ 0.00000182. Which conclusion is justified, assuming the model is appropriate?**"
                 ),
                 review_anova,
                 review_feedback(
                     review_anova.value,
                     correct_value="omnibus",
                     correct_text="**Correct.** The omnibus evidence is against equality of all tissue means; post-hoc comparisons locate supported differences.",
-                    incorrect_text="ANOVA does not assign a probability to the null and does not make every pairwise claim automatically true.",
+                    incorrect_text={
+                        "all_pairs": "The omnibus test provides evidence against all means being equal; it does not show "
+                        "that every pair differs. Use the multiplicity-adjusted comparisons to identify "
+                        "which differences are supported.",
+                        "null_probability": "The p-value is a tail probability for F under equal population means and the "
+                        "ANOVA assumptions. It does not assign a probability to that null hypothesis.",
+                    },
                 ),
             ]
         ),
         mo.vstack(
             [
                 mo.md(
-                    "**5. What does the peroxidase tissue × illumination interaction mean?**"
+                    "**5. In the observed peroxidase data, what does the tissue × illumination interaction describe on the additive mean-response scale?**"
                 ),
                 review_interaction,
                 review_feedback(
                     review_interaction.value,
                     correct_value="depends",
                     correct_text="**Correct.** The light–dark contrast changes across tissues, so a single overall illumination effect is incomplete.",
-                    incorrect_text="An interaction concerns dependence of one factor's effect on the other factor's level, not correlation between factor labels.",
+                    incorrect_text={
+                        "constant": "An identical light–dark difference at every tissue would give parallel profiles and "
+                        "no interaction in the population mean model. Interaction means that contrast changes "
+                        "across tissues.",
+                        "correlated": "Interaction concerns the response: how the light–dark mean difference varies by "
+                        "tissue. It can occur in a balanced factorial design where the factor labels "
+                        "themselves are independent.",
+                    },
                 ),
             ]
         ),

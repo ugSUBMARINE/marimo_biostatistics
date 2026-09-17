@@ -442,7 +442,7 @@ def _(
 def _(mo):
     conditional_checkpoint = mo.ui.radio(
         {
-            "Assuming the coin is fair, the probability of 13 or more heads in 20 tosses is about 0.132.": "conditional",
+            "Assuming 20 independent fair-coin tosses, the probability of 13 or more heads is about 0.132.": "conditional",
             "After observing 13 heads, the probability that the coin is fair is about 0.132.": "reversed",
             "There is a 13.2% probability that chance caused the observation.": "chance",
         },
@@ -461,23 +461,15 @@ def _(mo):
 
 
 @app.cell
-def _(conditional_checkpoint, mo):
-    conditional_feedback = (
-        mo.callout(
-            mo.md(
-                "**Correct.** The assumption $H_0:p=0.5$ comes before the probability statement."
-            ),
-            kind="success",
-        )
-        if conditional_checkpoint.value == "conditional"
-        else mo.callout(
-            mo.md(
-                r"A p-value conditions on $H_0$ and describes data or a statistic. It does not provide $P(H_0\mid\text{data})$ or assign a probability to 'chance.'"
-            ),
-            kind="danger",
-        )
-        if conditional_checkpoint.value is not None
-        else mo.callout(mo.md("Select an answer above."), kind="neutral")
+def _(conditional_checkpoint, review_feedback):
+    conditional_feedback = review_feedback(
+        conditional_checkpoint.value,
+        correct_value="conditional",
+        correct_text="**Correct.** Under independent fair-coin tosses, K is binomial with n = 20 and p = 0.5. The upper-tail probability P(K ≥ 13) ≈ 0.132 includes the observed 13 heads and all larger counts; it is not just P(K = 13).",
+        incorrect_text={
+            "reversed": "This reverses the conditioning. We assumed a fair coin to calculate P(K ≥ 13); a probability that the coin is fair after seeing the tosses would require a prior and a model of the alternatives.",
+            "chance": "The null model already describes random tosses. The 13.2% is a probability of an upper-tail outcome under that model, not a probability that randomness was the cause of the result.",
+        },
     )
     conditional_feedback  # noqa: B018
 
@@ -767,6 +759,9 @@ def _(mo):
             mo.md(r"""
             ### Checkpoint: choose the alternatives
 
+            Define each contrast as intervention minus reference, and decide the
+            scientific question before examining outcomes.
+
             1. Does a treatment **reduce** mean blood pressure?
             2. Does a mutation **decrease** enzyme activity?
             3. Does a culture condition **change** mean growth rate in either direction?
@@ -778,23 +773,15 @@ def _(mo):
 
 
 @app.cell
-def _(mo, scenario_direction):
-    scenario_result = (
-        mo.callout(
-            mo.md(
-                "**Correct.** The first two questions specify decreases; the third explicitly allows either direction."
-            ),
-            kind="success",
-        )
-        if scenario_direction.value == "correct"
-        else mo.callout(
-            mo.md(
-                "Translate the scientific wording before seeing the result: 'reduce' and 'decrease' are lower-tailed, while 'change in either direction' is two-sided."
-            ),
-            kind="danger",
-        )
-        if scenario_direction.value is not None
-        else mo.callout(mo.md("Select an answer above."), kind="neutral")
+def _(review_feedback, scenario_direction):
+    scenario_result = review_feedback(
+        scenario_direction.value,
+        correct_value="correct",
+        correct_text="**Correct.** For intervention minus reference, reductions in blood pressure and enzyme activity correspond to negative contrasts and lower-tailed alternatives. A growth-rate change in either direction requires a two-sided alternative. Reversing the contrast would reverse the one-sided directions.",
+        incorrect_text={
+            "wrong_1": "The blood-pressure and growth-rate directions are right. For mutation minus reference, decreased enzyme activity gives a negative contrast, so the second alternative must also be lower-tailed, not greater-tailed.",
+            "wrong_2": "The enzyme-activity direction is right. The first question asks specifically for a reduction, so its alternative is lower-tailed; the third includes both an increase and a decrease, so it must be two-sided rather than greater-tailed.",
+        },
     )
     scenario_result  # noqa: B018
 
@@ -1777,7 +1764,7 @@ def _(mo):
 
 
 @app.cell
-def _(misconception_choice, mo):
+def _(misconception_choice, review_feedback):
     misconception_corrections = {
         "hypothesis_probability": (
             r"The conditional is reversed. A p-value describes data under $H_0$; it does not provide $P(H_0\mid\mathrm{data})$."
@@ -1786,28 +1773,19 @@ def _(misconception_choice, mo):
             "Neither $p$ nor $1-p$ assigns a probability to a hypothesis. Bayesian posterior probabilities require an explicit prior and likelihood."
         ),
         "equivalence": (
-            "Absence of sufficient evidence against equality is not evidence of equivalence. Equivalence requires a meaningful margin and a suitable analysis."
+            "Failure to reject can reflect imprecision or low power. Equivalence requires a scientifically meaningful margin and an analysis showing effects are small enough relative to that margin; p > 0.05 in a difference test is insufficient."
         ),
         "importance": (
-            "Statistical compatibility and scientific importance are different. Inspect the effect estimate, uncertainty, design, and biological context."
+            "A tiny effect can have a small p-value with a large, precise sample. Inspect the effect in measurement units, its interval, and the biological context to judge importance; statistical significance alone cannot do that."
         ),
     }
-    if misconception_choice.value == "valid":
-        misconception_feedback = mo.callout(
-            mo.md(
-                "**Correct.** The statement begins with the null model and refers to the observed statistic or something more extreme."
-            ),
-            kind="success",
-        )
-    elif misconception_choice.value is None:
-        misconception_feedback = mo.callout(
-            mo.md("Select an interpretation above."), kind="neutral"
-        )
-    else:
-        misconception_feedback = mo.callout(
-            mo.md(misconception_corrections[misconception_choice.value]),
-            kind="danger",
-        )
+    misconception_feedback = review_feedback(
+        misconception_choice.value,
+        correct_value="valid",
+        correct_text="**Correct.** The null model and test assumptions define the reference distribution. The pre-specified alternative defines which statistics are at least as extreme as observed; the p-value is their total probability under that model.",
+        incorrect_text=misconception_corrections,
+        unanswered_text="Select an interpretation above.",
+    )
     misconception_feedback  # noqa: B018
 
 
@@ -2103,7 +2081,14 @@ def _(review_feedback, review_question_1):
         review_question_1.value,
         correct_value="conditional",
         correct_text="**Correct.** The p-value conditions on the null model and describes the statistic or more extreme values.",
-        incorrect_text="A p-value does not assign probabilities to hypotheses or to 'chance.' It is a tail probability under the assumed null model.",
+        incorrect_text={
+            "null_probability": "This reverses the conditioning. The calculation assumes H₀ to obtain a tail "
+            "probability for the test statistic; it does not calculate a posterior "
+            "probability that H₀ is true.",
+            "chance": "“Chance caused the result” is not an event defined by this test. The value 0.03 is the "
+            "probability of a statistic at least as extreme, in either tested direction, under H₀ "
+            "and the model assumptions.",
+        },
     )
 
 
@@ -2111,7 +2096,7 @@ def _(review_feedback, review_question_1):
 def _(mo):
     review_question_2 = mo.ui.radio(
         {
-            "A treatment is expected only to reduce the response, decided before data collection": "lower",
+            "The pre-specified claim is a reduction; an increase would not count as evidence for that claim": "lower",
             "Either an increase or decrease would be scientifically important": "two_sided",
             "The observed mean happened to be lower": "posthoc",
         },
@@ -2134,8 +2119,14 @@ def _(review_feedback, review_question_2):
     review_feedback(
         review_question_2.value,
         correct_value="lower",
-        correct_text="**Correct.** Direction follows the scientific question and must be specified before seeing the result.",
-        incorrect_text="A two-sided question needs a two-sided analysis, and choosing direction because of the observed sign is data-dependent.",
+        correct_text="**Correct.** A lower-tailed test addresses the pre-specified claim of a reduction, with increases providing no evidence for that claim. Merely expecting a decrease is insufficient if either direction would answer the research question; unexpected increases can still matter scientifically.",
+        incorrect_text={
+            "two_sided": "If increases and decreases both answer the scientific question, the alternative "
+            "should include both directions. A lower-tailed test would not test for an increase.",
+            "posthoc": "Choosing the tail after seeing the observed sign changes the testing procedure and "
+            "can inflate false positives. Specify the scientific direction before examining "
+            "outcomes.",
+        },
     )
 
 
@@ -2153,7 +2144,7 @@ def _(mo):
     mo.vstack(
         [
             mo.md(
-                "**3. In the birth-weight study, the population SD is unknown and n = 10. Why use a t test?**"
+                "**3. In the birth-weight example, assume independent observations from a normal population. The population SD is unknown and n = 10. Why use a one-sample t test?**"
             ),
             review_question_3,
         ]
@@ -2166,8 +2157,15 @@ def _(review_feedback, review_question_3):
     review_feedback(
         review_question_3.value,
         correct_value="use_t",
-        correct_text="**Correct.** Estimating the denominator adds uncertainty represented by the t distribution with n − 1 degrees of freedom.",
-        incorrect_text="The z test assumes the population SD is known. At small n, the t distribution's heavier tails materially change the tail probability.",
+        correct_text="**Correct.** Replacing σ with sample s adds uncertainty. Under the stated assumptions, (mean − null mean)/(s/√n) follows a t distribution with n − 1 = 9 degrees of freedom. Small n alone does not justify the normal-population assumption.",
+        incorrect_text={
+            "always_z": "A sample mean is not automatically normal. Even under a normal population model, "
+            "replacing the unknown σ with sample s makes the standardized statistic "
+            "t-distributed, with 9 degrees of freedom here.",
+            "same": "At 9 degrees of freedom the t distribution has heavier tails than the standard normal. "
+            "For the same nonzero statistic its two-sided p-value is larger; the distributions "
+            "approach one another as degrees of freedom increase.",
+        },
     )
 
 
@@ -2185,7 +2183,7 @@ def _(mo):
     mo.vstack(
         [
             mo.md(
-                "**4. A matching 95% confidence interval excludes the null value. What is the 5% two-sided test decision?**"
+                "**4. A null mean lies strictly outside a two-sided 95% t confidence interval. What is the decision in the matching two-sided t test at α = 0.05?**"
             ),
             review_question_4,
         ]
@@ -2198,8 +2196,14 @@ def _(review_feedback, review_question_4):
     review_feedback(
         review_question_4.value,
         correct_value="reject",
-        correct_text="**Correct.** With the same model, standard error, and tail convention, exclusion from the 95% interval matches rejection at α = 0.05.",
-        incorrect_text="The matched interval and two-sided test encode the same boundary. Excluding the null value corresponds to p ≤ 0.05.",
+        correct_text="**Correct.** With the same model, data, and standard error, a null mean strictly outside the closed 95% t interval gives p < 0.05. A value exactly at an endpoint gives p = 0.05, so the boundary convention should be stated separately.",
+        incorrect_text={
+            "fail": "Width describes precision, but the test decision depends on whether the interval "
+            "includes the null value. A matching interval can be wide and still exclude that value, "
+            "implying rejection.",
+            "unrelated": "The matching t interval is obtained by inverting the two-sided t test. A null value "
+            "strictly outside the closed 95% interval gives p < 0.05; at an endpoint p = 0.05.",
+        },
     )
 
 
@@ -2231,7 +2235,12 @@ def _(review_feedback, review_question_5):
         review_question_5.value,
         correct_value="correct_map",
         correct_text="**Correct.** Sensitivity is the probability of detection when disease is present, analogous to power; specificity is the true-negative rate, 1 − α.",
-        incorrect_text="False positives correspond to α and false negatives to β. Predictive probabilities additionally require prevalence or prior odds.",
+        incorrect_text={
+            "reversed": "Sensitivity is a true-positive rate, corresponding to power 1 − β; specificity is a "
+            "true-negative rate, corresponding to 1 − α. The error rates are their complements.",
+            "posterior": "Sensitivity and specificity condition on disease status. The probability of disease "
+            "given a positive result reverses that conditioning and also depends on prevalence.",
+        },
     )
 
 

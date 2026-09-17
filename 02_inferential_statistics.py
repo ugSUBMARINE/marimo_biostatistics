@@ -2916,9 +2916,14 @@ def _(review_feedback, review_question_1):
             "about one changes the probability of the other."
         ),
         incorrect_text=(
-            "Mutually exclusive positive-probability events cannot be independent: "
-            "their intersection is empty, although independence would require "
-            "$P(A\\cap B)=P(A)P(B)>0$."
+            {
+                "independent": "Mutual exclusivity means P(A ∩ B) = 0. Independence would require P(A ∩ B) = "
+                "P(A)P(B), which is positive here. Observing A rules out B, so they are dependent.",
+                "equal": "Mutual exclusivity restricts overlap, not the separate probabilities. On a fair die, "
+                "“roll 1” and “roll 2 or 3” are mutually exclusive but have probabilities 1/6 and 2/6.",
+                "intersection": "Mutually exclusive events cannot occur together, so their intersection is empty "
+                "and has probability zero. Their individual probabilities can both be positive.",
+            }
         ),
     )
 
@@ -2928,7 +2933,7 @@ def _(mo):
     review_question_2 = mo.ui.radio(
         {
             "Binomial: events per hour; Poisson: successes in fixed trials": "reversed",
-            "Binomial: fixed independent trials; Poisson: events in an interval": "correct_models",
+            "Binomial: successes in fixed independent trials with common p; Poisson: events in a fixed exposure interval": "correct_models",
             "Both require exactly two observed counts": "two_counts",
             "Both guarantee independence in real data": "guarantee",
         },
@@ -2953,13 +2958,22 @@ def _(review_feedback, review_question_2):
         review_question_2.value,
         correct_value="correct_models",
         correct_text=(
-            "**Correct.** Binomial counts successes among a fixed number of trials; "
-            "Poisson counts events in a defined time, area, or volume interval."
+            "**Correct.** Binomial counts successes among n independent binary trials "
+            "with a common p. In the Poisson-process model, events occur independently "
+            "at a constant rate, and the expected count is rate × exposure. "
+            "These assumptions need scientific justification."
         ),
         incorrect_text=(
-            "The binomial model uses fixed binary trials with a common p. The Poisson "
-            "model uses an event rate for a defined interval. Neither formula proves "
-            "that its assumptions hold."
+            {
+                "reversed": "The descriptions are reversed. Binomial counts successes among a fixed number of "
+                "independent trials with common success probability; Poisson models an event count in "
+                "a specified exposure interval.",
+                "two_counts": "A binomial trial has two possible outcomes, but its total count can range from 0 "
+                "to n. A Poisson count can be any nonnegative integer; neither model requires "
+                "exactly two observed counts.",
+                "guarantee": "Independence is an assumption to justify from the design and process. Choosing a "
+                "binomial or Poisson formula cannot make dependent observations independent.",
+            }
         ),
     )
 
@@ -2970,7 +2984,7 @@ def _(mo):
         {
             "The raw population becomes normal": "population_normal",
             "Every individual sample becomes symmetric": "sample_normal",
-            "The sampling distribution of the mean tends toward normality": "sampling_normal",
+            "The standardized sample mean has a sampling distribution approaching N(0, 1)": "sampling_normal",
             "The sample standard deviation becomes zero": "sd_zero",
         },
         value=None,
@@ -2980,7 +2994,8 @@ def _(mo):
         [
             mo.md(
                 "### 3. Central Limit Theorem\n\nWhat tends to become approximately "
-                "normal as sample size increases under the CLT conditions?"
+                "normal as sample size increases for independent, identically "
+                "distributed observations with finite, nonzero variance?"
             ),
             review_question_3,
         ]
@@ -2995,12 +3010,21 @@ def _(review_feedback, review_question_3):
         correct_value="sampling_normal",
         correct_text=(
             "**Correct.** The theorem concerns the distribution of sample means "
-            "across repeated samples, not the distribution of individual values."
+            "across repeated samples, not the distribution of individual values. "
+            "After centering at μ and scaling by σ/√n, the mean approaches a "
+            "standard normal distribution. The unscaled mean becomes more concentrated."
         ),
         incorrect_text=(
-            "The population and a particular raw sample do not become normal. The "
-            "CLT concerns the sampling distribution of the mean under stated "
-            "conditions."
+            {
+                "population_normal": "Taking larger samples does not change the population distribution. For "
+                "example, an exponential population stays skewed while its repeated-sample "
+                "means become approximately normal.",
+                "sample_normal": "The CLT concerns a statistic across repeated samples, not the shape of one "
+                "sample. A large raw sample can display the population’s skewness more clearly.",
+                "sd_zero": "The sample SD estimates the spread of individual observations and need not shrink "
+                "toward zero. The mean’s SE shrinks as σ/√n for independent observations; its "
+                "standardized sampling distribution is what the CLT describes.",
+            }
         ),
     )
 
@@ -3039,9 +3063,17 @@ def _(review_feedback, review_question_4):
             "interval-generating procedure under its assumptions."
         ),
         incorrect_text=(
-            "A frequentist confidence level describes repeated-procedure coverage, "
-            "not posterior probability, prediction coverage, or a guarantee for one "
-            "observed interval."
+            {
+                "posterior": "A posterior probability needs a Bayesian model and prior. Frequentist 95% coverage "
+                "refers to intervals varying across repeated samples while the population mean stays "
+                "fixed.",
+                "future": "A confidence interval targets the population mean, not the spread of new observations. "
+                "Predicting a new observation requires a prediction interval, which includes individual "
+                "variability.",
+                "guarantee": "Even a correctly calibrated 95% procedure misses the fixed parameter in about 5% of "
+                "repetitions. The confidence level cannot guarantee that this particular interval "
+                "contains it.",
+            }
         ),
     )
 
@@ -3050,10 +3082,10 @@ def _(review_feedback, review_question_4):
 def _(mo):
     review_question_5 = mo.ui.radio(
         {
-            "Bootstrap samples omit no data; covariance is always zero": "both_wrong",
-            "Bootstrap samples may repeat values; covariance can raise or lower uncertainty": "both_correct",
-            "Bootstrap samples must be larger; covariance only changes estimates": "larger",
-            "Bootstrap repairs biased sampling; covariance can be ignored": "repairs",
+            "Draw all 20 records without replacement": "without_replacement",
+            "Draw 20 records with replacement, allowing repeats and omissions": "replacement",
+            "Draw 200 records so each resample is more precise": "larger",
+            "Resampling guarantees that selection bias disappears": "repairs",
         },
         value=None,
         label="Choose one answer",
@@ -3061,8 +3093,9 @@ def _(mo):
     mo.vstack(
         [
             mo.md(
-                "### 5. Resampling and propagation\n\nWhich pair of statements is "
-                "correct?"
+                "### 5. Bootstrap resampling\n\nYou observed 20 independent units "
+                "and want to estimate the SE of their sample mean with an ordinary "
+                "nonparametric bootstrap. How should each resample be drawn?"
             ),
             review_question_5,
         ]
@@ -3074,17 +3107,143 @@ def _(mo):
 def _(review_feedback, review_question_5):
     review_feedback(
         review_question_5.value,
-        correct_value="both_correct",
+        correct_value="replacement",
         correct_text=(
-            "**Correct.** Replacement creates repetitions and omissions in a "
-            "same-sized bootstrap sample. In propagation, derivative signs and "
-            "covariance determine whether output variance rises or falls."
+            "**Correct.** Each resample contains 20 draws from the observed records "
+            "with replacement. A record can appear more than once or not at all. "
+            "Calculate a mean for each resample; the SD of these means estimates "
+            "the original mean’s SE under the bootstrap assumptions."
         ),
         incorrect_text=(
-            "Bootstrap resamples retain the original sample size but normally repeat "
-            "and omit observations; they cannot repair sampling bias. Covariance "
-            "affects propagated variance and may have either direction."
+            {
+                "without_replacement": "Drawing all 20 records without replacement would only reorder the "
+                "original sample. Replacement is what lets the bootstrap generate "
+                "different samples and hence a distribution of the statistic.",
+                "larger": "The ordinary nonparametric bootstrap uses the original sample size, here 20. Drawing "
+                "more records in each resample changes the sampling problem and usually makes the "
+                "resulting spread too small for the original estimator.",
+                "repairs": "The bootstrap resamples the observed records; it has no information about "
+                "systematically missing parts of the population. It estimates sampling uncertainty "
+                "under its assumptions, not a correction for selection bias.",
+            }
         ),
+    )
+
+
+@app.cell
+def _(mo):
+    review_question_6 = mo.ui.radio(
+        {
+            "Positive covariance increases the variance of both": "both_increase",
+            "It increases the variance of X + Y and decreases that of X − Y": "opposite",
+            "Covariance changes the means, but not the variances": "means_only",
+            "It can be ignored whenever both marginal distributions are normal": "normal",
+        },
+        value=None,
+        label="Choose one answer",
+    )
+    mo.vstack(
+        [
+            mo.md(
+                "### 6. Covariance in propagation\n\nHold Var(X) and Var(Y) fixed. "
+                "Relative to zero covariance, how does positive Cov(X, Y) affect "
+                "the variances of X + Y and X − Y?"
+            ),
+            review_question_6,
+        ]
+    )
+    return (review_question_6,)
+
+
+@app.cell
+def _(review_feedback, review_question_6):
+    review_feedback(
+        review_question_6.value,
+        correct_value="opposite",
+        correct_text="**Correct.** Var(X + Y) = Var(X) + Var(Y) + 2Cov(X, Y), whereas Var(X − Y) = Var(X) + Var(Y) − 2Cov(X, Y). Shared positive fluctuations reinforce a sum but cancel partly in a difference. These identities are exact for finite variances.",
+        incorrect_text={
+            "both_increase": "The covariance term changes sign for a difference. When X and Y move together, their sum fluctuates more, but subtracting Y partly cancels their shared fluctuation.",
+            "means_only": "Linearity gives E(X ± Y) = E(X) ± E(Y), regardless of covariance. Covariance enters the variance through the cross term, so it affects uncertainty even when the means are unchanged.",
+            "normal": "Normal marginal distributions do not imply independence or zero covariance. Correlated normal variables still require the covariance term when calculating the variance of a sum or difference.",
+        },
+    )
+
+
+@app.cell
+def _(mo):
+    review_question_7 = mo.ui.radio(
+        {
+            "Both population SD and the mean’s SE are halved": "both",
+            "Population SD stays 10 cm; the mean’s SE falls from 2 cm to 1 cm": "se_only",
+            "Population SD stays 10 cm; the mean’s SE falls from 2 cm to 0.5 cm": "quarter",
+            "Both remain unchanged because the population is unchanged": "neither",
+        },
+        value=None,
+        label="Choose one answer",
+    )
+    mo.vstack(
+        [
+            mo.md(
+                "### 7. SD versus SE\n\nHeights have population SD σ = 10 cm. "
+                "If the number of independent observations increases from 25 to 100 "
+                "from the same population, what happens to the population SD and the sample mean’s SE?"
+            ),
+            review_question_7,
+        ]
+    )
+    return (review_question_7,)
+
+
+@app.cell
+def _(review_feedback, review_question_7):
+    review_feedback(
+        review_question_7.value,
+        correct_value="se_only",
+        correct_text="**Correct.** SD describes variation among individual heights and stays at 10 cm. SE describes variation of sample means: 10/√25 = 2 cm and 10/√100 = 1 cm. Four times as many independent observations halves the SE, not the population spread.",
+        incorrect_text={
+            "both": "Larger samples estimate the mean more precisely; they do not make individual heights less variable. The population SD remains 10 cm while the mean’s SE decreases.",
+            "quarter": "The mean’s variance falls by a factor of four, but SE is its square root. Thus SE is divided by √4 = 2, giving 1 cm rather than 0.5 cm.",
+            "neither": "The population spread stays fixed, but the statistic averages more independent observations. Its sampling spread is σ/√n, so the mean’s SE falls from 2 cm to 1 cm.",
+        },
+    )
+
+
+@app.cell
+def _(mo):
+    review_question_8 = mo.ui.radio(
+        {
+            "10, because all ten deviations vary freely": "ten",
+            "9, because deviations from the fitted sample mean sum to zero": "nine",
+            "8, because estimating a mean and an SD always costs two degrees of freedom": "eight",
+            "9, because one observation is removed before calculating SD": "removed",
+        },
+        value=None,
+        label="Choose one answer",
+    )
+    mo.vstack(
+        [
+            mo.md(
+                "### 8. Degrees of freedom\n\nFor ten independent observations "
+                "from a normal population with unknown mean and variance, how many "
+                "degrees of freedom does the one-sample t statistic have, and why?"
+            ),
+            review_question_8,
+        ]
+    )
+    return (review_question_8,)
+
+
+@app.cell
+def _(review_feedback, review_question_8):
+    review_feedback(
+        review_question_8.value,
+        correct_value="nine",
+        correct_text="**Correct.** Estimating the mean imposes one constraint: the ten deviations sum to zero, so the last is determined by the other nine. All ten observations still contribute. Under normal sampling, this yields the t distribution with n − 1 = 9 degrees of freedom.",
+        incorrect_text={
+            "ten": "The deviations are measured from an estimated mean, so they must sum to zero. They cannot all vary freely: one linear constraint leaves n − 1 = 9 degrees of freedom.",
+            "eight": "For the one-sample t statistic, the relevant residual sum of squares has n − 1 degrees of freedom after estimating one mean. Estimating SD from those residuals does not impose a second independent constraint.",
+            "removed": "The value 9 is right, but no observation is discarded. The loss of one degree of freedom comes from the sum-to-zero constraint on deviations after estimating the mean.",
+        },
     )
 
 

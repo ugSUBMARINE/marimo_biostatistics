@@ -1685,7 +1685,8 @@ def _(mo):
 
                 ### 1. Histograms and binning
 
-                You increase the histogram from 10 bins to 25 bins and its shape
+                Keeping the observations and selected group fixed, you increase
+                the histogram from 10 bins to 25 bins and its shape
                 changes. What has changed?
                 """
             ),
@@ -1705,8 +1706,15 @@ def _(review_feedback, review_question_1):
             "intervals. Numerical summaries such as mean and median are unchanged."
         ),
         incorrect_text=(
-            "Not quite. Changing bin boundaries changes the representation, not the "
-            "observations, target population, or arithmetic mean."
+            {
+                "data": "Binning only assigns the existing heights to intervals; it does not change a recorded "
+                "height. Keep the dataset and selected group fixed and compare the unchanged summary "
+                "table.",
+                "population": "The target population is determined by whom the observations represent, not by the "
+                "plot settings. Changing bins changes the display of the same sample.",
+                "mean": "The arithmetic mean is calculated from the individual heights, not the histogram bars. "
+                "With the same observations, their sum and count stay fixed when the bins change.",
+            }
         ),
     )
 
@@ -1729,8 +1737,9 @@ def _(mo):
                 r"""
                 ### 2. An extreme observation
 
-                One implausibly large height is accidentally added to a dataset. Which
-                pair of summaries will generally change the most?
+                One implausibly large height is accidentally added to a dataset.
+                Which pair contains two summaries that are sensitive to how far
+                this observation lies from the rest?
                 """
             ),
             review_question_2,
@@ -1751,9 +1760,17 @@ def _(review_feedback, review_question_2):
             "therefore more resistant."
         ),
         incorrect_text=(
-            "Not quite. An extreme observation pulls the mean toward it and can "
-            "substantially increase the standard deviation. Median and IQR are "
-            "usually less affected."
+            {
+                "median_iqr": "Both the median and IQR are resistant to one extreme magnitude: they depend on "
+                "positions in the ordered data. They may shift when a value is added, but do not "
+                "grow without bound as that one value increases.",
+                "median_sd": "SD is sensitive to the extreme magnitude, but the median is resistant because it is "
+                "determined by the middle ranks. The mean is the sensitive measure of location to "
+                "pair with SD here.",
+                "mean_iqr": "The mean is sensitive to the extreme magnitude, but the IQR describes the middle "
+                "half of the ordered observations. SD, which uses every squared deviation, is the "
+                "sensitive measure of spread here.",
+            }
         ),
     )
 
@@ -1796,9 +1813,14 @@ def _(review_feedback, review_question_3):
             "(cm). Variance averages squared deviations, so its unit is cm²."
         ),
         incorrect_text=(
-            "Not quite. Deviations have units of centimetres; squaring them gives "
-            "variance in cm². Taking the square root returns the standard deviation "
-            "to centimetres."
+            {
+                "both_cm": "SD is in cm, but variance averages squared deviations. Each squared deviation has "
+                "units cm², and averaging does not remove those units.",
+                "reversed": "These units are reversed: squaring deviations produces variance in cm²; taking its "
+                "square root gives SD in cm.",
+                "unitless": "Dividing by n or n − 1 removes no measurement units. Variance remains in cm² and SD "
+                "in cm. Ratios such as CV and Cohen’s d are unitless because matching units cancel.",
+            }
         ),
     )
 
@@ -1844,9 +1866,14 @@ def _(review_feedback, review_question_4):
             "ratio. Cohen's $d$ is unitless."
         ),
         incorrect_text=(
-            "Not quite. Cohen's $d$ divides a mean difference by a pooled standard "
-            "deviation. Multiplying every measurement by the same factor multiplies "
-            "both numerator and denominator by that factor, leaving $d$ unchanged."
+            {
+                "doubled": "The mean difference doubles, but so does the pooled SD in the denominator. Thus (2 × "
+                "difference)/(2 × pooled SD) equals the original d.",
+                "halved": "The denominator doubles, but the numerator doubles too. Halving d would require "
+                "changing only the denominator, not converting all observations to a new unit.",
+                "zero": "Changing units does not remove a difference between the groups. The factor of two "
+                "cancels in d; it is zero only if the original mean difference was zero.",
+            }
         ),
     )
 

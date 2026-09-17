@@ -5,7 +5,7 @@ calculations.  Keep dataset-specific values, prose, and plotting logic in the
 individual notebooks.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from html import escape
 from typing import Any
 
@@ -122,17 +122,22 @@ def review_feedback(
     *,
     correct_value: Any,
     correct_text: str,
-    incorrect_text: str,
+    incorrect_text: str | Mapping[Any, str],
     unanswered_text: str = "Select an answer above.",
 ) -> mo.Html:
-    """Return the standard immediate-feedback callout for a review question."""
+    """Render feedback, optionally explaining each incorrect answer separately."""
 
     if selected_value is None:
         text, kind = unanswered_text, "neutral"
     elif selected_value == correct_value:
         text, kind = correct_text, "success"
     else:
-        text, kind = incorrect_text, "danger"
+        text = (
+            incorrect_text[selected_value]
+            if isinstance(incorrect_text, Mapping)
+            else incorrect_text
+        )
+        kind = "danger"
     return mo.callout(mo.md(text), kind=kind)
 
 
