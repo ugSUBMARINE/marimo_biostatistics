@@ -1288,7 +1288,7 @@ def _(mo):
             "Wells are matched only because they share a plate number": "design",
         },
         value=None,
-        label="Which design directly supports a within-patient paired comparison?",
+        label="Which design directly supports a within-specimen paired comparison?",
     )
     mo.vstack(
         [
