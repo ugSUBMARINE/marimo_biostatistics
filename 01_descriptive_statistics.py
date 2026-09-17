@@ -311,7 +311,8 @@ def _(mo):
     in your own words before consulting the selector. Select **Height in
     centimeters**, **Disease stage I–IV**, then **Bacterial species** to compare
     the explanations. For each, ask whether ordering, differences, and ratios are
-    meaningful. The selector reveals the classification; it does not submit a
+    meaningful. Then classify temperature, colony counts, and the agreement scale
+    to check the remaining examples. The selector reveals the classification; it does not submit a
     scored answer.
     """)
 
@@ -386,8 +387,8 @@ def _(mo):
     ## 2. From raw observations to a distribution
 
     A histogram groups observations into intervals called **bins**. Its appearance
-    depends on the number and location of those bins. This makes a histogram useful,
-    but not uniquely determined by the data.
+    depends on the number and location of those bins, so the data alone do not
+    uniquely determine its appearance.
 
     On a **count scale**, bar height is the number of observations in a bin. On a
     **density scale**, the *area* of a bar represents relative frequency. A density
@@ -401,6 +402,11 @@ def _(mo):
     Finally compare **Female** and **Male**: this changes which data enter the
     histogram and summary table. A model overlay is a comparison, not evidence
     that the population must be normal.
+
+    The table's **coefficient of variation** is 100 × SD / mean. Here it uses
+    the population SD (divide by n) to describe the displayed heights. It expresses
+    spread relative to the mean as a percentage and is meaningful for positive
+    ratio-scale measurements such as height, not Celsius temperatures.
     """)
 
 
@@ -423,7 +429,7 @@ def _(mo):
     )
     density_scale = mo.ui.checkbox(value=False, label="Use density scale")
     polygon_overlay = mo.ui.checkbox(value=True, label="Show frequency polygon")
-    normal_overlay = mo.ui.checkbox(value=False, label="Overlay fitted normal model")
+    normal_overlay = mo.ui.checkbox(value=False, label="Overlay fitted normal curve")
     return (
         bin_count,
         density_scale,
@@ -506,7 +512,7 @@ def _(
     histogram_values, histogram_edges, _ = histogram_axis.hist(
         height_subset,
         bins=bin_count.value,
-        range=(145, 200),
+        range=(min(145, height_subset.min()), max(200, height_subset.max())),
         density=density_scale.value,
         color=COLORS["orange"],
         edgecolor="white",
@@ -531,7 +537,7 @@ def _(
         )
 
     if normal_overlay.value:
-        normal_x = np.linspace(140, 205, 400)
+        normal_x = np.linspace(histogram_edges[0] - 5, histogram_edges[-1] + 5, 400)
         fitted_normal = stats.norm(
             loc=height_subset.mean(), scale=height_subset.std(ddof=0)
         )
@@ -550,7 +556,7 @@ def _(
         title=f"Distribution of heights — {selected_group_label}",
         xlabel="Height [cm]",
         ylabel="Density" if density_scale.value else "Number of observations",
-        xlim=(140, 205),
+        xlim=(histogram_edges[0] - 5, histogram_edges[-1] + 5),
     )
     histogram_axis.grid(axis="y", linestyle=":", alpha=0.4)
     if polygon_overlay.value or normal_overlay.value:
@@ -833,7 +839,7 @@ def _(mo):
     hypothetical_height = mo.ui.slider(
         130,
         500,
-        value=220,
+        value=170,
         step=1,
         show_value=True,
         label="Additional hypothetical height [cm]",
@@ -860,29 +866,34 @@ def _(
 
     outlier_comparison = pd.DataFrame(
         {
-            "Statistic": ["Mean", "Median", "Population SD"],
+            "Statistic": ["Mean", "Median", "Population SD", "Range"],
             "Original": [
                 original_values.mean(),
                 np.median(original_values),
                 original_values.std(ddof=0),
+                np.ptp(original_values),
             ],
             "With added value": [
                 augmented_values.mean(),
                 np.median(augmented_values),
                 augmented_values.std(ddof=0),
+                np.ptp(augmented_values),
             ],
         }
     )
     outlier_comparison["Change"] = (
         outlier_comparison["With added value"] - outlier_comparison["Original"]
     )
-    outlier_axis_max = max(235, hypothetical_height.value + 15)
+    outlier_axis_min = min(130, original_values.min() - 5)
+    outlier_axis_max = max(
+        235, original_values.max() + 5, hypothetical_height.value + 15
+    )
 
     outlier_figure, outlier_axis = plt.subplots(figsize=FIGURE_SIZE_COMPACT)
     outlier_axis.hist(
         original_values,
         bins=18,
-        range=(130, 235),
+        range=(outlier_axis_min, max(235, original_values.max() + 5)),
         color=COLORS["sky"],
         alpha=0.7,
         edgecolor="white",
@@ -912,7 +923,7 @@ def _(
     outlier_axis.set(
         xlabel="Height [cm]",
         ylabel="Count",
-        xlim=(130, outlier_axis_max),
+        xlim=(outlier_axis_min, outlier_axis_max),
         title="Influence of one additional observation",
     )
     outlier_axis.legend(frameon=False, ncol=1, fontsize=8, loc="upper right")
@@ -1169,19 +1180,23 @@ def _(
 ):
     selected_quantile = np.quantile(height_subset, quantile_level.value)
     empirical_share = np.mean(height_subset <= selected_quantile)
+    quantile_bounds = (
+        min(140, height_subset.min() - 5),
+        max(205, height_subset.max() + 5),
+    )
 
     quantile_figure, quantile_axis = plt.subplots(figsize=FIGURE_SIZE_SHALLOW)
     quantile_axis.hist(
         height_subset,
         bins=18,
-        range=(140, 205),
+        range=quantile_bounds,
         density=True,
         color=COLORS["orange"],
         edgecolor="white",
         alpha=0.7,
     )
     quantile_axis.axvspan(
-        140,
+        quantile_bounds[0],
         selected_quantile,
         color=COLORS["sky"],
         alpha=0.35,
@@ -1195,7 +1210,7 @@ def _(
     quantile_axis.set(
         xlabel="Height [cm]",
         ylabel="Density",
-        xlim=(140, 205),
+        xlim=quantile_bounds,
         title="A quantile divides the ordered observations",
     )
     quantile_axis.legend(frameon=False)
@@ -1248,6 +1263,9 @@ def _(mo):
     Squaring prevents positive and negative deviations from cancelling. Variance is
     measured in squared units (cm²); the square root returns the standard deviation
     to the original unit (cm).
+
+    This worked table reuses the observations selected in Section 3. Changing
+    that section's example sample size or the selected height group updates it.
     """)
 
 
@@ -1326,7 +1344,8 @@ def _(mo):
     detail the added summary
     makes easier to see and which it conceals. A box contains the middle half of
     the observations; a violin's width represents estimated density, not an
-    uncertainty interval.
+    uncertainty interval. The box plot also marks the mean with a triangle;
+    the violin plot marks the median with a horizontal line.
     """)
 
 
@@ -1334,7 +1353,7 @@ def _(mo):
 def _(mo):
     distribution_view = mo.ui.radio(
         ["Raw points", "Raw points + box plot", "Raw points + violin plot"],
-        value="Raw points + box plot",
+        value="Raw points",
         label="Choose a display",
         inline=False,
     )

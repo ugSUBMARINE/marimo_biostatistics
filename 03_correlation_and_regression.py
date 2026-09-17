@@ -306,9 +306,11 @@ def _(mo, np, pd, read_csv, stats):
                 + 2.5 * group
                 + rng.normal(0.0, 0.55, x_values.size)
             )
-        else:
+        elif pattern == "Influential outlier":
             y_values = 2.0 + 0.8 * x_values + rng.normal(0.0, 0.7, x_values.size)
             y_values[-1] += 8.0
+        else:
+            raise ValueError(f"Unknown residual pattern: {pattern}")
         return x_values, y_values
 
     anscombe_x = np.array([10, 8, 13, 9, 11, 14, 6, 4, 12, 7, 5], dtype=float)
@@ -597,8 +599,8 @@ def _(
     )
     covariance_note = mo.callout(
         mo.md(
-            f"The covariance is **{selected_details['covariance']:.3f}** in the "
-            f"current product of units, while $r$ is "
+            f"The covariance is **{selected_details['covariance']:.3f}**, measured "
+            f"in x-units × y-units, while $r$ is "
             f"**{selected_details['correlation']:.3f}** and has no unit. Positive "
             "linear rescaling and shifting do not change the correlation. Blue "
             "points contribute positively; vermillion points contribute negatively."
@@ -691,7 +693,7 @@ def _(
         xlabel="Predictor x [arbitrary units]",
         ylabel="Response y [arbitrary units]",
         xlim=(-2.8, 2.8),
-        ylim=(-8, 8),
+        ylim=(min(-8, cloud_y.min() - 1), max(8, cloud_y.max() + 1)),
     )
     cloud_axis.grid(linestyle=":", alpha=0.3)
     cloud_figure.tight_layout()
@@ -1024,7 +1026,7 @@ def _(mo):
     should cluster more tightly around the population value.
 
     The repetition count controls how precisely the simulation describes the
-    sampling distribution; it does not add rivers to any one sample. Settings
+    sampling distribution; it does not add observations to any one sample. Settings
     take effect only when you press the button. Press it again without changing
     settings to see Monte Carlo variation; the caption records the settings used
     for the displayed result.
@@ -1421,7 +1423,7 @@ def _(mo):
         0.0,
         2.5,
         step=0.1,
-        value=1.2,
+        value=1.0,
         show_value=True,
         full_width=True,
         label="Monotonic curvature",

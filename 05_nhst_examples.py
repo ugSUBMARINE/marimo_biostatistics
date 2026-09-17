@@ -377,7 +377,7 @@ def _(mo):
     By the end of the chapter, you should be able to:
 
     1. distinguish independent, paired, correlation, count, and multi-group designs;
-    2. report a Welch mean comparison with its confidence interval and scientific units;
+    2. report a Welch mean comparison with its confidence interval and measurement units;
     3. diagnose model assumptions without treating a preliminary test as a gatekeeper;
     4. explain what rank and permutation procedures do—and do not—test;
     5. decompose variation in one- and two-way ANOVA;
@@ -746,7 +746,7 @@ def _(mo):
     deviations. Inspect the data and the model discrepancy directly.
 
     **Try this:** select **Normal reference** with $n=20$, then compare
-    **Right-skewed**, **Heavy-tailed**, and **One extreme observation**. Match
+    **Right-skewed**, **Heavy-tailed**, **Bimodal mixture**, and **One extreme observation**. Match
     the histogram features to bends or isolated points in the Q–Q plot. Repeat
     at $n=8$ and $n=200$: a small sample can hide departures and also look
     irregular by chance. Controls update immediately with reproducible simulated
@@ -883,7 +883,7 @@ def _(mo):
         0.5,
         4.0,
         step=0.25,
-        value=3.0,
+        value=1.0,
         show_value=True,
         full_width=True,
         label="Small-group SD",
@@ -917,7 +917,7 @@ def _(mo):
 
 @app.cell
 def _(mo, simulate_variance_imbalance):
-    initial_stress_result = simulate_variance_imbalance(8, 40, 3.0, 1.0, 10_000, 82405)
+    initial_stress_result = simulate_variance_imbalance(8, 40, 1.0, 1.0, 10_000, 82405)
     get_stress_result, set_stress_result = mo.state(initial_stress_result)
     return get_stress_result, set_stress_result
 
@@ -1325,7 +1325,8 @@ def _(mo):
     The same observed correlation produces stronger evidence as sample size grows,
     but neither a small p-value nor a narrow interval establishes causation.
 
-    **Try this:** hold the explorer correlation at 0.30 and compare $n=10$,
+    **Try this:** change the explorer correlation from its observed-data default
+    to 0.30 and compare $n=10$,
     24, and 100. Follow the test statistic, interval, and p-value as information
     increases for the same association strength. Then change $r$ from 0.30 to
     −0.30: a two-sided test keeps the same p-value while the direction reverses.
@@ -1611,8 +1612,7 @@ def _(
 
     expected_count_note = (
         "All expected counts exceed five, so the usual chi-squared approximation is reasonable here."
-        if mendel_expected.min() >= 5
-        else "At least one expected count is below five; prefer an exact or simulation-based calibration."
+        " For datasets with small expected counts, consider an exact or simulation-based calibration."
     )
     mendel_note = mo.callout(
         mo.md(
@@ -2343,18 +2343,19 @@ def _(mo):
 def _(
     COLORS,
     FIGURE_SIZE_STANDARD,
+    anova_illumination,
     compact_table,
     holm_adjust,
     mo,
     np,
     pd,
-    peroxidase_data,
+    selected_peroxidase,
     plt,
     stats,
     tissue_order,
     two_column_panel,
 ):
-    posthoc_frame = peroxidase_data.loc[peroxidase_data["light_conditions"] == "light"]
+    posthoc_frame = selected_peroxidase
     posthoc_groups = [
         posthoc_frame.loc[
             posthoc_frame["tissue"] == tissue, "peroxidase_amount"
@@ -2438,18 +2439,30 @@ def _(
             linewidth=2,
         )
     posthoc_axis.set(
+        title=f"{anova_illumination.value.capitalize()}-grown seedlings",
         xlabel="Pairwise mean difference [a.u.] with Tukey 95% CI",
         yticks=posthoc_y,
         yticklabels=posthoc_labels,
         ylim=(-0.7, len(posthoc_pairs) - 0.3),
-        xlim=(-0.4, 2.0),
     )
     posthoc_axis.grid(axis="x", linestyle=":", alpha=0.35)
     posthoc_figure.tight_layout()
 
+    posthoc_supported = [
+        label
+        for label, p_value in zip(posthoc_labels, posthoc_tukey)
+        if p_value <= 0.05
+    ]
+    posthoc_conclusion = (
+        "Tukey supports differences for: " + "; ".join(posthoc_supported) + "."
+        if posthoc_supported
+        else "Tukey does not support any pairwise difference at the 5% family-wise level."
+    )
     posthoc_note = mo.callout(
         mo.md(
-            "For light-grown seedlings, Tukey identifies primary leaf versus root and primary leaf versus mesocotyl, while root versus mesocotyl remains uncertain. The adjustment applies to the pre-defined family of all three tissue comparisons."
+            f"For {anova_illumination.value}-grown seedlings, {posthoc_conclusion} "
+            "Other pairwise differences remain uncertain. The adjustment applies "
+            "to the pre-defined family of all three tissue comparisons."
         ),
         kind="info",
     )
@@ -2767,12 +2780,12 @@ def _(
             "dark": [0.5, 1.0, 1.5],
         },
         "converging": {
-            "light": [0.7, 1.4, 2.1],
-            "dark": [1.1, 1.4, 1.7],
+            "light": [1.5, 1.7, 1.9],
+            "dark": [0.5, 1.0, 1.5],
         },
         "diverging": {
-            "light": [0.8, 1.4, 2.4],
-            "dark": [1.1, 1.4, 1.7],
+            "light": [0.9, 1.7, 2.5],
+            "dark": [0.5, 1.0, 1.5],
         },
         "crossing": {
             "light": [0.6, 1.4, 2.2],

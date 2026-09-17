@@ -49,7 +49,9 @@ class CsvLoadingTests(unittest.TestCase):
         ):
             result = read_csv(url, **options)
         fetch.assert_called_once_with(url)
-        self.assertEqual(result.to_dict("records"), [{"gender": "female", "height": 163.0}])
+        self.assertEqual(
+            result.to_dict("records"), [{"gender": "female", "height": 163.0}]
+        )
 
 
 if __name__ == "__main__":

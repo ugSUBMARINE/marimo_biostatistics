@@ -48,7 +48,6 @@ def _():
     from companion_style import (
         COLORS,
         FIGURE_SIZE_LINKED,
-        FIGURE_SIZE_SHALLOW,
         FIGURE_SIZE_STANDARD,
         compact_table,
         review_feedback,
@@ -58,7 +57,6 @@ def _():
     return (
         COLORS,
         FIGURE_SIZE_LINKED,
-        FIGURE_SIZE_SHALLOW,
         FIGURE_SIZE_STANDARD,
         compact_table,
         np,
@@ -133,23 +131,12 @@ def _(np, stats):
             last_unnormalized = last_prior * last_likelihood
             last_evidence = float(last_unnormalized.sum())
             posterior = last_unnormalized / last_evidence
-        next_roll_probability = np.array(
-            [
-                sum(
-                    posterior[index] / side
-                    for index, side in enumerate(sides_array)
-                    if value <= side
-                )
-                for value in range(1, int(sides_array.max()) + 1)
-            ]
-        )
         return {
             "prior": last_prior,
             "likelihood": last_likelihood,
             "unnormalized": last_unnormalized,
             "evidence": last_evidence,
             "posterior": posterior,
-            "next_roll_probability": next_roll_probability,
         }
 
     def beta_binomial_predictive(alpha, beta, future_trials):
@@ -468,8 +455,8 @@ def _(compact_table, mo, pd, stats):
             interval_table,
             mo.callout(
                 mo.md(
-                    "The Bayesian interval uses a uniform $Beta(1,1)$ prior and a "
-                    "$Beta(4,8)$ posterior. Numerical resemblance does not make the "
+                    "The Bayesian interval uses a uniform $\\operatorname{Beta}(1,1)$ prior and a "
+                    "$\\operatorname{Beta}(4,8)$ posterior. Numerical resemblance does not make the "
                     "two interpretations interchangeable."
                 ),
                 kind="info",
@@ -541,8 +528,8 @@ def _(mo):
 
     ## 3. Diagnostic tests, prevalence, and the base-rate effect
 
-    Sensitivity is $P(+\mid sick)$ and specificity is $P(-\mid healthy)$. Patients
-    usually need the reverse conditional, such as $P(sick\mid +)$. That positive
+    Sensitivity is $P(+\mid \text{sick})$ and specificity is $P(-\mid \text{healthy})$. Patients
+    usually need the reverse conditional, such as $P(\text{sick}\mid +)$. That positive
     predictive value depends strongly on disease prevalence.
 
     **Before moving the controls:** predict whether a positive result is more likely
@@ -558,7 +545,8 @@ def _(mo):
     rescales expected counts, not the conditional probabilities; fractional counts
     are expectations, not fractions of a person. **Target PPV** only calculates
     the specificity that would be required—it does not set the actual specificity
-    slider or change the current test's PPV. These are hypothetical model inputs.
+    slider or change the current test's PPV. Prevalence, sensitivity, specificity,
+    cohort size, and target PPV are hypothetical inputs for this teaching model.
     """)
 
 
@@ -680,7 +668,9 @@ def _(
     colors = [COLORS["green"], COLORS["vermillion"], COLORS["gray"], COLORS["sky"]]
     diagnostic_axis.bar(categories, values, color=colors)
     diagnostic_axis.set(
-        ylabel="Expected people [log scale]", yscale="symlog", ylim=(0, max(values) * 2)
+        ylabel="Expected people [symmetric-log scale]",
+        yscale="symlog",
+        ylim=(0, max(values) * 2),
     )
     diagnostic_axis.tick_params(axis="x", rotation=20)
     diagnostic_axis.grid(axis="y", linestyle=":", alpha=0.3)
@@ -744,7 +734,8 @@ def _(mo):
     1 to 20, and press **Add roll**. The probability-history plot retains every
     update so you can see when a hypothesis is ruled out and how repeated small rolls
     gradually favor smaller dice. **Undo** removes the latest roll; **Reset** clears
-    your sequence without changing the selected prior.
+    your sequence without changing the selected prior. The lecture-only reveal
+    slider is disabled while you enter your own rolls.
     """)
 
 
@@ -767,6 +758,11 @@ def _(mo):
         value="All dice equally likely",
         label="Prior belief",
     )
+    return dice_prior_choice, dice_sequence_source
+
+
+@app.cell
+def _(dice_sequence_source, mo):
     dice_reveal = mo.ui.slider(
         0,
         6,
@@ -774,8 +770,9 @@ def _(mo):
         show_value=True,
         full_width=True,
         label="Number of revealed rolls",
+        disabled=dice_sequence_source.value != "lecture",
     )
-    return dice_prior_choice, dice_reveal, dice_sequence_source
+    return (dice_reveal,)
 
 
 @app.cell
@@ -1000,14 +997,14 @@ def _(mo):
     Let $p$ be the prevalence of an allergy. A beta prior and binomial likelihood
     form a conjugate pair:
 
-    $$p\sim Beta(a,b),\qquad K\mid p\sim Binomial(n,p).$$
+    $$p\sim \operatorname{Beta}(a,b),\qquad K\mid p\sim \operatorname{Binomial}(n,p).$$
 
     Multiplying their kernels collects the powers of $p$ and $1-p$:
 
     $$p^{a-1}(1-p)^{b-1}\;p^k(1-p)^{n-k}
       =p^{a+k-1}(1-p)^{b+n-k-1}.$$
 
-    Thus $p\mid k,n\sim Beta(a+k,b+n-k)$. The update behaves as if successes and
+    Thus $p\mid k,n\sim \operatorname{Beta}(a+k,b+n-k)$. The update behaves as if successes and
     failures add information to the two prior shape parameters.
 
     **Try this:** with $n=10$ and $k=3$, compare $a=b=1$ with $a=b=10$.
@@ -1345,9 +1342,13 @@ def _(mo):
     density, not acceptance rate alone. Repeat a setting to see Monte Carlo variation.
 
     **Inspect chain 1 through step** only reveals more of the existing early walk;
-    it does not run a new chain or change the full-run diagnostics below. Look for
+    it does not run a new chain or change the full-run diagnostics below. A new
+    run resets this inspection slider to step 50. We discard the first 20% of
+    beta-model draws as warmup; the regression example uses 2,000 of 8,000 draws
+    (25%). These are teaching choices; the trace and convergence checks are
+    needed to assess whether warmup was sufficient. Look for
     overlapping traces without persistent drift, decaying autocorrelation, and
-    split-$\hat R$ near one. These are computational checks, not proof that the
+    split R-hat near one. These are computational checks, not proof that the
     statistical model is appropriate.
     """)
 
@@ -1561,7 +1562,9 @@ def _(
             mo.stat(
                 f"{beta_walk_result['ess']:.0f}", label="Approximate ESS", bordered=True
             ),
-            mo.stat(f"{beta_walk_result['rhat']:.3f}", label="Split R̂", bordered=True),
+            mo.stat(
+                f"{beta_walk_result['rhat']:.3f}", label="Split R-hat", bordered=True
+            ),
         ]
     )
     two_column_panel(
@@ -1625,7 +1628,7 @@ def _(
                 mo.md(r"""
             Trust requires more than a plausible histogram. Chains should overlap and
             mix, autocorrelation should decay, effective sample size should be
-            adequate, and $\hat R$ should be near one. More samples do not fix a bad
+            adequate, and split R-hat should be near one. More samples do not fix a bad
             likelihood, prior, coding error, or non-converged chain; routine thinning
             only discards information.
             """),
@@ -1645,7 +1648,7 @@ def _(mo):
     We return to the river data from Chapter 3 and model oxygen concentration from
     flow speed. Standardizing flow speed improves the random walk's geometry:
 
-    $$Oxygen_i\sim N(\alpha+\beta_z z_i,\sigma),\qquad
+    $$\text{Oxygen}_i\sim N(\alpha+\beta_z z_i,\sigma^2),\qquad
       z_i=\frac{x_i-\bar x}{s_x}.$$
 
     The weakly informative priors are
@@ -1883,7 +1886,7 @@ def _(
             mo.callout(
                 mo.md(r"""
             The chains start apart, pass through warm-up, and should settle into
-            overlapping stationary traces. The reported ESS and split-$\hat R$
+            overlapping stationary traces. The reported ESS and split R-hat
             summarize, but do not replace, visual inspection.
             """),
                 kind="warn",
@@ -2187,7 +2190,7 @@ def _(mo):
     - The beta-binomial model provides an exact posterior and predictive distribution,
       making it an ideal reference for learning MCMC.
     - Metropolis draws are dependent. Trace plots, autocorrelation, ESS, multiple
-      chains, and split-$\hat R$ assess computation, not scientific model validity.
+      chains, and split R-hat assess computation, not scientific model validity.
     - Bayesian regression produces joint parameter distributions, credible bands for
       mean responses, and wider predictive intervals for future observations.
     - Every probability statement remains conditional on data quality, likelihood,

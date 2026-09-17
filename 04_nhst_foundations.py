@@ -489,7 +489,7 @@ def _(mo):
 
     ## 2. One-sided and two-sided tails
 
-    “More extreme” is defined by the test statistic and the alternative hypothesis.
+    "More extreme" is defined by the test statistic and the alternative hypothesis.
     A lower-tailed alternative asks about unusually small values, an upper-tailed
     alternative about unusually large values, and a two-sided alternative about
     deviations in either direction. The direction must be chosen from the scientific
@@ -830,8 +830,9 @@ def _(mo):
     null mean. The standardized discrepancy approaches zero and the two-sided
     p-value grows. Restore the original means, then increase $n$ or decrease the
     sample SD to see stronger evidence for the same mean difference. Compare
-    z and t tests after setting their two SD controls to the same value: only
-    the SD belonging to the selected test enters its calculation. Finally vary
+    z and t tests at the same SD: set the visible SD control, switch test type,
+    then set the newly visible SD control to the same value. Each test retains
+    its own SD setting, and only the selected test's SD enters its calculation. Finally vary
     $\alpha$; the decision can change while the p-value stays fixed. These sliders
     describe hypothetical sample summaries rather than resampling raw birth weights.
     """)
@@ -1732,7 +1733,8 @@ def _(mo):
     small p-value does not establish a large, important, or unbiased effect.
     Nor does a p-value tell you the probability that 'chance caused' your result.
     Instead, random chance is a built-in assumption of the null hypothesis, and the
-    p-value simply measures how well your data matches that assumption.
+    p-value is the probability, under that null model, of a test statistic at
+    least as extreme as the observed one in the direction(s) of the alternative.
 
     These statements assume that the analysis procedure was specified and applied as
     claimed. Repeated looks, selective outcome reporting, and trying many analyses can

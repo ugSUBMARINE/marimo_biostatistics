@@ -670,7 +670,7 @@ def _(
             dice_interval,
             mo.stat(
                 f"{exact_interval_probability:.3f}",
-                label=f"𝑃({interval_a} < 𝑋 ≤ {interval_b})",
+                label=f"P({interval_a} < X ≤ {interval_b})",
                 bordered=True,
             ),
         ]
@@ -797,7 +797,7 @@ def _(
         [
             binomial_n,
             binomial_p,
-            mo.stat(f"{binomial_mean:.2f}", label="Expected count 𝑛𝑝", bordered=True),
+            mo.stat(f"{binomial_mean:.2f}", label="Expected count np", bordered=True),
             mo.stat(
                 f"{np.sqrt(binomial_variance):.2f}",
                 label="Standard deviation",
@@ -995,6 +995,8 @@ def _(mo):
     to 2. Both changes can reduce the probability within this fixed interval
     for different reasons. Move both interval handles to select another region.
     The probability is an area, not the height of the density curve.
+    Finally reduce the SD to 0.2: the density peak exceeds one, while its total
+    area remains one.
     """)
 
 
@@ -1010,7 +1012,7 @@ def _(mo):
         label="Location μ",
     )
     normal_sd = mo.ui.slider(
-        0.5,
+        0.2,
         2.0,
         step=0.1,
         value=1.0,
@@ -1070,7 +1072,7 @@ def _(
         xlabel="Value x",
         ylabel="Probability density",
         xlim=(-8, 8),
-        ylim=(0, 0.9),
+        ylim=(0, max(0.9, normal_pdf.max() * 1.1)),
     )
     normal_axes[0].grid(axis="y", linestyle=":", alpha=0.35)
     normal_axes[0].legend(frameon=False, fontsize=8)
@@ -1107,7 +1109,7 @@ def _(
             normal_interval,
             mo.stat(
                 f"{normal_probability:.3f}",
-                label=f"𝑃({normal_a:g} < 𝑋 ≤ {normal_b:g})",
+                label=f"P({normal_a:g} < X ≤ {normal_b:g})",
                 bordered=True,
             ),
             mo.stat(
@@ -1262,12 +1264,12 @@ def _(
                 variance_sample_size,
                 mo.stat(
                     f"{average_variance_n:.3f}",
-                    label="Average with 𝑛",
+                    label="Average with n",
                     bordered=True,
                 ),
                 mo.stat(
                     f"{average_variance_n_minus_1:.3f}",
-                    label="Average with 𝑛 − 1",
+                    label="Average with n − 1",
                     bordered=True,
                 ),
             ]
@@ -1338,7 +1340,7 @@ def _(mo):
 def _(mo, np, simulate_clt):
     initial_clt_result = simulate_clt(
         "Right-skewed",
-        sample_size=10,
+        sample_size=2,
         repetitions=5_000,
         statistic_name="Mean",
         rng=np.random.default_rng(82405),
@@ -1358,7 +1360,7 @@ def _(mo, np, set_clt_result, simulate_clt):
     clt_sample_size = mo.ui.slider(
         2,
         100,
-        value=10,
+        value=2,
         show_value=True,
         full_width=True,
         label="Sample size n",
@@ -1564,9 +1566,9 @@ def _(COLORS, FIGURE_SIZE_SHALLOW, mo, np, plt, two_column_panel):
     two_column_panel(
         mo.vstack(
             [
-                mo.stat("0.447", label="SE at 𝑛 = 5", bordered=True),
-                mo.stat("0.224", label="SE at 𝑛 = 20", bordered=True),
-                mo.stat("0.112", label="SE at 𝑛 = 80", bordered=True),
+                mo.stat("0.447", label="SE at n = 5", bordered=True),
+                mo.stat("0.224", label="SE at n = 20", bordered=True),
+                mo.stat("0.112", label="SE at n = 80", bordered=True),
             ]
         ),
         mo.vstack(
@@ -1729,12 +1731,12 @@ def _(
             t_degrees_of_freedom,
             mo.stat(
                 f"{t_critical_95:.3f}",
-                label="Central 95% critical value 𝑡*",
+                label="Central 95% critical value t*",
                 bordered=True,
             ),
             mo.stat(
                 f"{100 * t_probability_beyond_normal_critical:.1f}%",
-                label="𝑃(|𝑇| > 1.96)",
+                label="P(|T| > 1.96)",
                 bordered=True,
             ),
         ]
@@ -1767,7 +1769,7 @@ def _(mo):
     also reflects the change in degrees of freedom. Next raise confidence from
     0.80 to 0.99 and see the intervals widen. Finally move only the mean: the
     intervals shift without changing width. For the z interval, the SD control
-    is treated as known population SD; for the t interval, it is treated as an
+    is treated as a known population SD; for the t interval, it is treated as an
     estimated sample SD. These controls update the calculation immediately.
     """)
 
@@ -1790,7 +1792,7 @@ def _(mo):
         value=11.4,
         show_value=True,
         full_width=True,
-        label="SD [cm]",
+        label="SD: known σ (z) / estimated s (t) [cm]",
     )
     ci_sample_size = mo.ui.slider(
         2,
@@ -1887,7 +1889,7 @@ def _(
             mo.stat(f"{standard_error:.2f} cm", label="Standard error", bordered=True),
             mo.stat(
                 f"{t_interval[0]:.1f} to {t_interval[1]:.1f} cm",
-                label="𝑡 interval",
+                label="t interval",
                 bordered=True,
             ),
         ]
@@ -2299,7 +2301,7 @@ def _(
         format_mapping={"Height [cm]": "{:.1f}"},
     )
 
-    statistic_unit = "cm²" if bootstrap_result["statistic_name"] == "Variance" else "cm"
+    statistic_unit = "cm"
     bootstrap_figure, bootstrap_axis = plt.subplots(figsize=FIGURE_SIZE_STANDARD)
     bootstrap_axis.hist(
         bootstrap_statistics,
@@ -2592,11 +2594,6 @@ def _(
                 label="Original sampling distribution",
                 bordered=True,
             ),
-            # mo.stat(
-            #     "10,000",
-            #     label="Fixed-seed simulated estimates",
-            #     bordered=True,
-            # ),
         ]
     )
     simple_note = mo.callout(mo.md(taylor_explanation), kind=simple_note_kind)
