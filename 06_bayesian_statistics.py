@@ -766,7 +766,7 @@ def _(dice_sequence_source, mo):
     dice_reveal = mo.ui.slider(
         0,
         6,
-        value=1,
+        value=0,
         show_value=True,
         full_width=True,
         label="Number of revealed rolls",
@@ -907,7 +907,7 @@ def _(
         width=0.36,
         color=COLORS["gray"],
         alpha=0.7,
-        label="Prior before latest roll",
+        label="Prior before\nlatest roll",
     )
     dice_axis.bar(
         positions + 0.18,
