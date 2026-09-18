@@ -131,12 +131,23 @@ def _(np, stats):
             last_unnormalized = last_prior * last_likelihood
             last_evidence = float(last_unnormalized.sum())
             posterior = last_unnormalized / last_evidence
+        next_roll_outcomes = np.arange(1, sides_array.max() + 1)
+        next_roll_probability = (
+            np.where(
+                next_roll_outcomes[:, None] <= sides_array,
+                1.0 / sides_array,
+                0.0,
+            )
+            @ posterior
+        )
         return {
             "prior": last_prior,
             "likelihood": last_likelihood,
             "unnormalized": last_unnormalized,
             "evidence": last_evidence,
             "posterior": posterior,
+            "next_roll_outcomes": next_roll_outcomes,
+            "next_roll_probability": next_roll_probability,
         }
 
     def beta_binomial_predictive(alpha, beta, future_trials):
@@ -548,14 +559,33 @@ def _(mo):
 
     Sensitivity is $P(+\mid \text{sick})$ and specificity is $P(-\mid \text{healthy})$. Patients
     usually need the reverse conditional, such as $P(\text{sick}\mid +)$. That positive
-    predictive value depends strongly on disease prevalence.
+    predictive value (PPV) depends strongly on disease prevalence. The negative predictive value (NPV)
+    measures the probability that a person who gets a negative test result truly does not have the disease
+    ($P(\text{healthy}\mid -)$).
+
+    Let $p$ be prevalence, $\mathrm{Se}$ sensitivity, and $\mathrm{Sp}$ specificity,
+    all expressed as proportions between 0 and 1. Bayes' theorem gives
+
+    $$\mathrm{PPV}=\frac{\mathrm{Se}\,p}
+    {\mathrm{Se}\,p+(1-\mathrm{Sp})(1-p)}.$$
+
+    $$\mathrm{NPV}=\frac{\mathrm{Sp}(1-p)}
+    {\mathrm{Sp}(1-p)+(1-\mathrm{Se})p}.$$
+
+    The PPV denominator is the probability of **any positive result**: true
+    positives plus false positives. The NPV denominator is the probability of
+    **any negative result**: true negatives plus false negatives. In the
+    natural-frequency table below, the same ratios are
+    $\mathrm{PPV}=\mathrm{TP}/(\mathrm{TP}+\mathrm{FP})$ and
+    $\mathrm{NPV}=\mathrm{TN}/(\mathrm{TN}+\mathrm{FN})$, where TP, FP, TN, and FN
+    are the corresponding expected counts.
 
     **Before moving the controls:** predict whether a positive result is more likely
     to be a true or false positive at the default prevalence of 0.01%.
 
     **Try this:** keep sensitivity at 82% and specificity at 96.3%, and compare
     prevalence values of 0.01%, 1%, and 10%. Follow the true-positive and
-    false-positive counts into the denominator of positive predictive value (PPV).
+    false-positive counts into the denominator of PPV.
     Then restore prevalence to 0.01% and increase specificity to 99.9%: even a small
     false-positive rate can matter when the healthy population is very large.
 
@@ -754,6 +784,12 @@ def _(mo):
     gradually favor smaller dice. **Undo** removes the latest roll; **Reset** clears
     your sequence without changing the selected prior. The lecture-only reveal
     slider is disabled while you enter your own rolls.
+
+    The predictive chart shows the **next roll of the same hidden die**, averaging
+    over all dice that remain possible. Reveal the first 7 and compare the plots:
+    d4 and d6 are ruled out, but rolling a 1 through 6 is still possible on the
+    larger dice. Before any rolls are revealed, this prediction uses the initial
+    prior; after observations, it is a **posterior predictive distribution**.
     """)
 
 
@@ -856,7 +892,6 @@ def _(
     pd,
     plt,
     student_dice_controls,
-    two_column_panel,
 ):
     dice_sides = np.array([4, 6, 8, 12, 20])
     dice_sequence = [6, 4, 7, 7, 8, 2]
@@ -915,9 +950,8 @@ def _(
     assert posterior_history.shape == (len(revealed_rolls) + 1, len(dice_sides))
     assert np.allclose(posterior_history.sum(axis=1), 1.0)
 
-    dice_figure, (dice_axis, dice_history_axis) = plt.subplots(
-        1, 2, figsize=FIGURE_SIZE_LINKED
-    )
+    dice_plot_size = (FIGURE_SIZE_LINKED[0] / 2, FIGURE_SIZE_LINKED[1])
+    dice_figure, dice_axis = plt.subplots(figsize=dice_plot_size)
     positions = np.arange(dice_sides.size)
     dice_axis.bar(
         positions - 0.18,
@@ -935,6 +969,7 @@ def _(
         label="Posterior",
     )
     dice_axis.set(
+        title="Which die is likely?",
         xticks=positions,
         xticklabels=[f"d{side}" for side in dice_sides],
         xlabel="Hidden-die hypothesis",
@@ -943,7 +978,9 @@ def _(
     )
     dice_axis.grid(axis="y", linestyle=":", alpha=0.3)
     dice_axis.legend(frameon=False, fontsize=8)
+    dice_figure.tight_layout()
 
+    dice_history_figure, dice_history_axis = plt.subplots(figsize=dice_plot_size)
     history_colors = [
         COLORS["orange"],
         COLORS["sky"],
@@ -974,34 +1011,74 @@ def _(
     )
     dice_history_axis.grid(linestyle=":", alpha=0.3)
     dice_history_axis.legend(frameon=False, fontsize=7, ncols=2)
-    dice_figure.tight_layout()
-    latest_text = "none" if not revealed_rolls else str(revealed_rolls[-1])
+    dice_history_figure.tight_layout()
+
+    next_roll_outcomes = dice_result["next_roll_outcomes"]
+    next_roll_probability = dice_result["next_roll_probability"]
+    assert np.isclose(next_roll_probability.sum(), 1.0)
+    dice_predictive_figure, dice_predictive_axis = plt.subplots(figsize=dice_plot_size)
+    dice_predictive_axis.bar(
+        next_roll_outcomes,
+        next_roll_probability,
+        width=0.8,
+        color=COLORS["green"],
+    )
+    dice_predictive_axis.set(
+        title="What might the next roll be?",
+        xlabel="Next roll of the same die",
+        ylabel="Predictive probability",
+        xticks=[1, 4, 6, 8, 12, 16, 20],
+        xlim=(0.3, 20.7),
+        ylim=(0, 0.27),
+    )
+    dice_predictive_axis.grid(axis="y", linestyle=":", alpha=0.3)
+    dice_predictive_figure.tight_layout()
+    next_roll_above_six = float(next_roll_probability[next_roll_outcomes > 6].sum())
     sequence_label = (
         "Lecture sequence"
         if dice_sequence_source.value == "lecture"
         else "Your sequence"
     )
+    latest_roll_note = (
+        f"Before observing the latest **{revealed_rolls[-1]}**, its predictive "
+        f"probability was **{dice_result['evidence']:.3f}** (the update's evidence). "
+        "The predictive chart uses the updated posterior to predict the next roll."
+        if revealed_rolls
+        else "No rolls observed yet: the predictive chart uses the initial prior."
+    )
     dice_note = mo.callout(
         mo.md(
-            f"{sequence_label}: **{revealed_rolls or 'none'}**. The latest roll is "
-            f"**{latest_text}** and its predictive probability before observing it "
-            f"was the evidence **{dice_result['evidence']:.3f}**. Impossible results "
-            "give a hypothesis likelihood—and therefore posterior probability—zero."
+            f"""
+            **From beliefs to predictions**
+
+            The first two plots describe **which die is hidden**. The third plot
+            predicts **its next roll**, averaging each die's roll probabilities
+            using its current posterior weight.
+
+            Chance of a roll above 6: **{next_roll_above_six:.1%}**.
+            Ruling out a small die does not rule out small rolls on larger dice.
+
+            **{sequence_label}:** {revealed_rolls or "none"}.
+
+            {latest_roll_note}
+            """
         ),
         kind="info",
     )
-    two_column_panel(
-        mo.vstack(
-            [
-                dice_prior_choice,
-                dice_sequence_source,
-                dice_reveal,
-                student_dice_controls,
-                update_table,
-            ]
-        ),
-        mo.vstack([dice_figure, dice_note]),
-        widths=(1.35, 2),
+    dice_controls = mo.vstack(
+        [dice_prior_choice, dice_sequence_source, dice_reveal, student_dice_controls]
+    )
+    mo.Html(
+        f'<div class="dice-explorer-controls">'
+        f"<div>{dice_controls.text}</div>"
+        f"<div>{mo.as_html(update_table).text}</div>"
+        f"</div>"
+        f'<div class="dice-explorer-grid">'
+        f"<div>{mo.as_html(dice_figure).text}</div>"
+        f"<div>{mo.as_html(dice_history_figure).text}</div>"
+        f"<div>{mo.as_html(dice_predictive_figure).text}</div>"
+        f'<div class="dice-explorer-note">{dice_note.text}</div>'
+        f"</div>"
     )
 
 

@@ -195,6 +195,112 @@ class NotebookRegressionTests(unittest.TestCase):
                 result["dice_reveal"]._component_args["disabled"], source == "student"
             )
 
+    def test_dice_predictive_probabilities_match_known_cases(self):
+        update = run_cell(6, "dice_update")["dice_update"]
+        sides = [4, 6, 8, 12, 20]
+        prior = np.ones(5) / 5
+        initial = update(sides, prior, [])
+        np.testing.assert_array_equal(initial["next_roll_outcomes"], np.arange(1, 21))
+        np.testing.assert_allclose(
+            initial["next_roll_probability"],
+            [0.135] * 4 + [0.085] * 2 + [31 / 600] * 2 + [2 / 75] * 4 + [0.01] * 8,
+        )
+        after_seven = update(sides, prior, [7])
+        np.testing.assert_allclose(after_seven["posterior"][:2], 0)
+        self.assertTrue(np.all(after_seven["next_roll_probability"][:6] > 0))
+        self.assertAlmostEqual(after_seven["next_roll_probability"][19], 3 / 310)
+        after_twenty = update(sides, prior, [20])
+        np.testing.assert_allclose(after_twenty["next_roll_probability"], 0.05)
+
+        for weights in (
+            prior,
+            [0.10, 0.10, 0.10, 0.15, 0.55],
+            [0.35, 0.35, 0.15, 0.10, 0.05],
+        ):
+            for observations in ([], [6], [6, 4, 7, 7, 8, 2], [20], [1] * 30):
+                result = update(sides, weights, observations)
+                probabilities = result["next_roll_probability"]
+                self.assertAlmostEqual(probabilities.sum(), 1)
+                self.assertTrue(np.all(probabilities >= 0))
+                # A prediction before a new observation is its next update's evidence.
+                for roll, probability in enumerate(probabilities, start=1):
+                    next_update = update(sides, weights, [*observations, roll])
+                    self.assertAlmostEqual(probability, next_update["evidence"])
+
+    def test_dice_predictive_plot_follows_source_prior_and_reveal(self):
+        helpers = run_cell(6, "dice_update")
+        cases = [
+            ("lecture", "uniform", 0, [20]),
+            ("lecture", "uniform", 3, [20]),
+            ("lecture", "favor_d20", 6, []),
+            ("student", "uniform", 6, []),
+            ("student", "favor_small", 0, [6, 7]),
+            ("student", "favor_d20", 6, [20]),
+        ]
+        for source, prior, reveal, rolls in cases:
+            with self.subTest(source=source, prior=prior, reveal=reveal, rolls=rolls):
+                result = run_cell(
+                    6,
+                    "dice_predictive_figure",
+                    **helpers,
+                    dice_sequence_source=mo.ui.radio([source], value=source),
+                    dice_prior_choice=mo.ui.radio([prior], value=prior),
+                    dice_reveal=mo.ui.slider(0, 6, value=reveal),
+                    get_student_dice_rolls=lambda rolls=rolls: rolls,
+                    student_dice_controls=mo.md(""),
+                )
+                expected_rolls = (
+                    [6, 4, 7, 7, 8, 2][:reveal] if source == "lecture" else rolls
+                )
+                self.assertEqual(result["revealed_rolls"], expected_rolls)
+                expected = helpers["dice_update"](
+                    result["dice_sides"], result["dice_priors"][prior], expected_rolls
+                )
+                np.testing.assert_allclose(
+                    [
+                        bar.get_height()
+                        for bar in result["dice_predictive_axis"].patches
+                    ],
+                    expected["next_roll_probability"],
+                )
+                if not expected_rolls:
+                    self.assertIn("No rolls observed yet", result["dice_note"].text)
+                    self.assertNotIn("update's evidence", result["dice_note"].text)
+                plt.close("all")
+
+    def test_dice_manual_add_undo_reset_preserve_prediction_state(self):
+        helpers = run_cell(6, "dice_update")
+        rolls = []
+
+        def set_rolls(update):
+            nonlocal rolls
+            rolls = update(rolls) if callable(update) else update
+
+        controls = run_cell(
+            6,
+            "student_dice_controls",
+            dice_sequence_source=control("student"),
+            set_student_dice_rolls=set_rolls,
+        )
+
+        def prediction():
+            return helpers["dice_update"](
+                [4, 6, 8, 12, 20], [0.35, 0.35, 0.15, 0.10, 0.05], rolls
+            )["next_roll_probability"]
+
+        initial = prediction()
+        controls["student_dice_add"]._on_click(None)
+        self.assertEqual(rolls, [6])
+        self.assertFalse(np.allclose(initial, prediction()))
+        controls["student_dice_undo"]._on_click(None)
+        self.assertEqual(rolls, [])
+        np.testing.assert_allclose(initial, prediction())
+        controls["student_dice_add"]._on_click(None)
+        controls["student_dice_add"]._on_click(None)
+        controls["student_dice_reset"]._on_click(None)
+        self.assertEqual(rolls, [])
+        np.testing.assert_allclose(initial, prediction())
+
 
 if __name__ == "__main__":
     unittest.main()

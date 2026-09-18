@@ -100,6 +100,32 @@
   line-height: 1.5;
 }
 
+/* Give the dice plots one row and the explanation a full-width row below. */
+.dice-explorer-controls,
+.dice-explorer-grid {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+.dice-explorer-controls {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 1.5rem;
+}
+.dice-explorer-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dice-explorer-note { grid-column: 1 / -1; }
+.dice-explorer-controls > div,
+.dice-explorer-grid > div { min-width: 0; }
+.dice-explorer-controls > div { overflow-x: auto; }
+
+@media (max-width: 900px) {
+  .dice-explorer-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 700px) {
+  .dice-explorer-controls { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (max-width: 540px) {
   .course-header .course-masthead {
     flex-direction: column-reverse;
