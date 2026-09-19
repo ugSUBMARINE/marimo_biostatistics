@@ -50,6 +50,7 @@ def _():
         FIGURE_SIZE_LINKED,
         FIGURE_SIZE_STANDARD,
         compact_table,
+        responsive_row,
         review_feedback,
         two_column_panel,
     )
@@ -63,6 +64,7 @@ def _():
         pd,
         plt,
         read_csv,
+        responsive_row,
         review_feedback,
         stats,
         two_column_panel,
@@ -836,7 +838,7 @@ def _(mo):
 
 
 @app.cell
-def _(dice_sequence_source, mo, set_student_dice_rolls):
+def _(dice_sequence_source, mo, responsive_row, set_student_dice_rolls):
     student_dice_roll = mo.ui.dropdown(
         {str(roll): roll for roll in range(1, 21)},
         value="6",
@@ -867,10 +869,9 @@ def _(dice_sequence_source, mo, set_student_dice_rolls):
     student_dice_controls = mo.vstack(
         [
             student_dice_roll,
-            mo.hstack(
+            responsive_row(
                 [student_dice_add, student_dice_undo, student_dice_reset],
-                widths="equal",
-                wrap=True,
+                min_width=9,
             ),
         ]
     )

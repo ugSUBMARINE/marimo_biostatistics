@@ -54,6 +54,7 @@ def _():
         FIGURE_SIZE_STANDARD,
         compact_table,
         dataset_action_buttons,
+        responsive_row,
         review_feedback,
         two_column_panel,
     )
@@ -71,6 +72,7 @@ def _():
         pd,
         plt,
         read_csv,
+        responsive_row,
         review_feedback,
         stats,
         two_column_panel,
@@ -1270,7 +1272,7 @@ def _(mo):
 
 
 @app.cell
-def _(compact_table, mean_example_values, mo, pd):
+def _(compact_table, mean_example_values, mo, pd, responsive_row):
     deviation_center = mean_example_values.mean()
     deviation_table = pd.DataFrame(
         {
@@ -1291,7 +1293,7 @@ def _(compact_table, mean_example_values, mo, pd):
                     "Squared deviation [cm²]": "{:.2f}",
                 },
             ),
-            mo.hstack(
+            responsive_row(
                 [
                     mo.stat(
                         f"{deviation_table['Deviation xᵢ − x̄ [cm]'].sum():.2e} cm",
@@ -1309,7 +1311,6 @@ def _(compact_table, mean_example_values, mo, pd):
                         bordered=True,
                     ),
                 ],
-                widths="equal",
             ),
             mo.callout(
                 mo.md(

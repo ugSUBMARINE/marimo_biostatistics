@@ -2,7 +2,7 @@
 
 import ast
 import unittest
-from itertools import combinations
+from itertools import combinations, pairwise
 from math import comb
 from pathlib import Path
 from types import SimpleNamespace
@@ -73,6 +73,135 @@ def control(value):
 class NotebookRegressionTests(unittest.TestCase):
     def tearDown(self):
         plt.close("all")
+
+    def test_precision_plan_is_minimal_and_fourfold_scaling_holds(self):
+        for mode in ("Target SE", "Target margin of error"):
+            for sd, target, level in ((10, 1, 0.95), (0.5, 5, 0.8), (20, 0.1, 0.99)):
+                with self.subTest(mode=mode, sd=sd, target=target, level=level):
+                    controls = {
+                        "precision_sd": control(sd),
+                        "precision_n": control(25),
+                        "precision_mode": control(mode),
+                        "precision_target": control(target),
+                        "precision_confidence": control(level),
+                    }
+                    plan = run_cell(2, "planning_required_n", **controls)
+                    required = plan["planning_required_n"]
+                    multiplier = (
+                        stats.norm.ppf((1 + level) / 2)
+                        if mode == "Target margin of error"
+                        else 1
+                    )
+                    self.assertLessEqual(multiplier * sd / np.sqrt(required), target)
+                    if required > 1:
+                        self.assertGreater(
+                            multiplier * sd / np.sqrt(required - 1), target
+                        )
+                    larger = run_cell(
+                        2,
+                        "planning_required_n",
+                        **(controls | {"precision_n": control(100)}),
+                    )
+                    self.assertAlmostEqual(
+                        larger["planning_current_se"], plan["planning_current_se"] / 2
+                    )
+                    plot = run_cell(2, "scaling_figure", **plan)
+                    low, high = plot["scaling_axis"].get_xlim()
+                    self.assertLess(low, min(25, required))
+                    self.assertGreater(high, max(100, required))
+        base = {
+            "precision_sd": control(10),
+            "precision_n": control(25),
+            "precision_mode": control("Target SE"),
+            "precision_confidence": control(0.95),
+        }
+        whole = run_cell(2, "planning_required_n", **base, precision_target=control(1))
+        half = run_cell(2, "planning_required_n", **base, precision_target=control(0.5))
+        self.assertEqual(half["planning_required_n"], 4 * whole["planning_required_n"])
+
+    def test_bootstrap_confidence_reuses_draws_and_matches_same_sample_t_interval(self):
+        helpers = run_cell(2, "bootstrap_height_sample")
+        values = np.array([140.0, 154.0, 160.0, 162.0, 163.0, 169.0, 190.0])
+        for statistic in ("Mean", "Median", "Standard deviation", "IQR"):
+            result = helpers["bootstrap_height_sample"](
+                values, 1000, statistic, np.random.default_rng(93)
+            )
+            saved_draws = result["statistics"].copy()
+            intervals = []
+            for level in (0.80, 0.95, 0.99):
+                calculation = run_cell(
+                    2,
+                    "bootstrap_t_interval",
+                    bootstrap_confidence=control(level),
+                    get_bootstrap_result=lambda result=result: result,
+                    original_height_values=values,
+                )
+                interval = (
+                    calculation["bootstrap_lower"],
+                    calculation["bootstrap_upper"],
+                )
+                np.testing.assert_allclose(
+                    interval,
+                    np.percentile(saved_draws, [50 * (1 - level), 50 * (1 + level)]),
+                )
+                self.assertIs(calculation["bootstrap_statistics"], result["statistics"])
+                np.testing.assert_array_equal(result["statistics"], saved_draws)
+                if statistic == "Mean":
+                    expected = stats.t.interval(
+                        level,
+                        len(values) - 1,
+                        loc=values.mean(),
+                        scale=stats.sem(values),
+                    )
+                    np.testing.assert_allclose(
+                        calculation["bootstrap_t_interval"], expected
+                    )
+                else:
+                    self.assertIsNone(calculation["bootstrap_t_interval"])
+                intervals.append(interval)
+            self.assertTrue(
+                all(a[0] >= b[0] and a[1] <= b[1] for a, b in pairwise(intervals))
+            )
+
+    def test_bootstrap_settings_wait_for_button_and_display_completed_statistic(self):
+        helpers = run_cell(2, "bootstrap_height_sample")
+        values = np.array([150.0, 158.0, 162.0, 170.0, 190.0])
+        runs = []
+        controls = run_cell(
+            2,
+            "run_bootstrap",
+            **helpers,
+            original_height_values=values,
+            set_bootstrap_result=runs.append,
+        )
+        self.assertEqual(runs, [])
+        controls["bootstrap_statistic"]._update(["Median"])
+        controls["bootstrap_repetitions"]._update(200)
+        self.assertEqual(runs, [])
+        controls["run_bootstrap_button"]._on_click(None)
+        self.assertEqual(runs[-1]["statistic_name"], "Median")
+        self.assertEqual(len(runs[-1]["statistics"]), 200)
+        controls["bootstrap_statistic"]._update(["Mean"])
+        confidence = run_cell(2, "bootstrap_confidence")["bootstrap_confidence"]
+        calculation = run_cell(
+            2,
+            "bootstrap_t_interval",
+            bootstrap_confidence=confidence,
+            get_bootstrap_result=lambda: runs[-1],
+            original_height_values=values,
+        )
+        display = run_cell(
+            2,
+            "bootstrap_figure",
+            **(controls | calculation),
+        )
+        self.assertTrue(display["bootstrap_pending"])
+        self.assertIsNone(calculation["bootstrap_t_interval"])
+        self.assertIn("median", display["bootstrap_axis"].get_xlabel())
+        previous = runs[-1]["statistics"].copy()
+        controls["run_bootstrap_button"]._on_click(None)
+        self.assertEqual(runs[-1]["statistic_name"], "Mean")
+        self.assertFalse(np.array_equal(previous, runs[-1]["statistics"]))
 
     def test_height_histogram_counts_every_observation(self):
         heights = pd.Series([130.0, 144.9, 165.0, 175.0, 200.1, 220.0])

@@ -100,6 +100,31 @@
   line-height: 1.5;
 }
 
+/* Use the space available to each activity, including in split windows. */
+.course-panel { container-type: inline-size; }
+.course-panel-grid {
+  display: grid;
+  grid-template-columns: var(--panel-columns);
+  gap: var(--panel-gap);
+  align-items: center;
+}
+.course-panel-grid > div { min-width: 0; }
+
+@container (max-width: 800px) {
+  .course-panel-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+}
+
+.course-responsive-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--item-min-width)), 1fr));
+  gap: 0.5rem;
+}
+.course-responsive-row > div { min-width: 0; }
+
 /* Give the dice plots one row and the explanation a full-width row below. */
 .dice-explorer-controls,
 .dice-explorer-grid {

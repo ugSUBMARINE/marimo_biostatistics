@@ -58,14 +58,26 @@ def two_column_panel(
     widths: Sequence[float] = (1, 3),
     gap: float = 0.5,
 ) -> mo.Html:
-    """Place controls and results in the standard responsive panel."""
+    """Keep desktop proportions, stacking below 800px of available panel width."""
 
-    return mo.hstack(
-        [controls, results],
-        widths=list(widths),
-        gap=gap,
-        align="center",
-        wrap=True,
+    columns = " ".join(f"minmax(0, {width}fr)" for width in widths)
+    return mo.Html(
+        '<div class="course-panel">'
+        f'<div class="course-panel-grid" style="--panel-columns: {columns}; '
+        f'--panel-gap: {gap}rem">'
+        f"<div>{mo.as_html(controls).text}</div>"
+        f"<div>{mo.as_html(results).text}</div>"
+        "</div></div>"
+    )
+
+
+def responsive_row(items: Sequence[object], *, min_width: float = 13) -> mo.Html:
+    """Wrap cards or buttons into full-width rows before their text is squeezed."""
+
+    children = "".join(f"<div>{mo.as_html(item).text}</div>" for item in items)
+    return mo.Html(
+        f'<div class="course-responsive-row" style="--item-min-width: {min_width}rem">'
+        f"{children}</div>"
     )
 
 
@@ -150,6 +162,7 @@ __all__ = [
     "compact_table",
     "dataset_action_buttons",
     "notebook_header",
+    "responsive_row",
     "review_feedback",
     "two_column_panel",
 ]

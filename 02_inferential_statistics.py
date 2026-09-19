@@ -1534,41 +1534,216 @@ def _(
 
 
 @app.cell
-def _(COLORS, FIGURE_SIZE_SHALLOW, mo, np, plt, two_column_panel):
-    scaling_sample_sizes = np.arange(2, 201)
-    scaling_standard_errors = 1 / np.sqrt(scaling_sample_sizes)
+def _(mo):
+    mo.md(r"""
+    ### Planning for precision
+
+    **Try this:** keep $\sigma=10$, compare $n=25$ with $n=100$, and watch
+    SE fall from 2 to 1. The extra marker shows what four times the current $n$
+    would achieve. Halve the target SE to see the required sample size quadruple
+    (apart from integer rounding). All controls update immediately.
+
+    Choose a target **SE** or a two-sided confidence interval's **margin of
+    error** (half its width), in the same units as the measurements. With
+    $z=z_{1-\alpha/2}$, the planning rules are
+
+    $$n_{\rm SE}=\left\lceil(\sigma/\mathrm{SE}_{\rm target})^2\right\rceil,
+    \qquad n_{\rm margin}=\left\lceil(z\sigma/m)^2\right\rceil.$$
+
+    These rules assume independent observations from a population with a fixed,
+    finite SD. Supply a plausible population SD from prior information; an
+    uncertain planning SD makes the required $n$ uncertain too. The margin rule
+    is exact for a normal mean with known SD. For non-normal populations it uses
+    a normal approximation; when SD must be estimated, a t interval has a random
+    width and this z-based plan is only an approximation. This plans precision,
+    not power, and does not correct sampling bias or dependence.
+    """)
+
+
+@app.cell
+def _(mo):
+    precision_sd = mo.ui.slider(
+        0.5,
+        20,
+        step=0.5,
+        value=10,
+        show_value=True,
+        full_width=True,
+        label="Planning population SD σ",
+    )
+    precision_n = mo.ui.slider(
+        5,
+        500,
+        step=5,
+        value=25,
+        show_value=True,
+        full_width=True,
+        label="Current sample size n",
+    )
+    precision_mode = mo.ui.dropdown(
+        ["Target SE", "Target margin of error"],
+        value="Target SE",
+        full_width=True,
+        label="Precision target",
+    )
+    precision_target = mo.ui.slider(
+        0.1,
+        5,
+        step=0.1,
+        value=1,
+        show_value=True,
+        full_width=True,
+        label="Target size (measurement units)",
+    )
+    precision_confidence = mo.ui.slider(
+        0.80,
+        0.99,
+        step=0.01,
+        value=0.95,
+        show_value=True,
+        full_width=True,
+        label="Confidence (margin target only)",
+    )
+    return (
+        precision_confidence,
+        precision_mode,
+        precision_n,
+        precision_sd,
+        precision_target,
+    )
+
+
+@app.cell
+def _(
+    np,
+    precision_confidence,
+    precision_mode,
+    precision_n,
+    precision_sd,
+    precision_target,
+    stats,
+):
+    planning_sd = float(precision_sd.value)
+    planning_n = int(precision_n.value)
+    planning_critical = (
+        float(stats.norm.ppf((1 + precision_confidence.value) / 2))
+        if precision_mode.value == "Target margin of error"
+        else 1.0
+    )
+    planning_target_se = float(precision_target.value) / planning_critical
+    planning_required_n = max(1, int(np.ceil((planning_sd / planning_target_se) ** 2)))
+    planning_current_se = planning_sd / np.sqrt(planning_n)
+    planning_achieved_se = planning_sd / np.sqrt(planning_required_n)
+    return (
+        planning_achieved_se,
+        planning_critical,
+        planning_current_se,
+        planning_n,
+        planning_required_n,
+        planning_sd,
+        planning_target_se,
+    )
+
+
+@app.cell
+def _(
+    COLORS,
+    FIGURE_SIZE_SHALLOW,
+    mo,
+    np,
+    plt,
+    two_column_panel,
+    precision_confidence,
+    precision_mode,
+    precision_n,
+    precision_sd,
+    precision_target,
+    planning_achieved_se,
+    planning_critical,
+    planning_current_se,
+    planning_n,
+    planning_required_n,
+    planning_sd,
+    planning_target_se,
+):
+    import matplotlib.ticker as _ticker
+
+    scaling_highlight_n = [planning_n, 4 * planning_n, planning_required_n]
+    scaling_sample_sizes = np.geomspace(
+        max(1, min(scaling_highlight_n) / 2), max(scaling_highlight_n) * 2, 400
+    )
     scaling_figure, scaling_axis = plt.subplots(figsize=FIGURE_SIZE_SHALLOW)
     scaling_axis.plot(
         scaling_sample_sizes,
-        scaling_standard_errors,
+        planning_sd / np.sqrt(scaling_sample_sizes),
         color=COLORS["blue"],
         linewidth=2,
-        label=r"$\sigma/\sqrt{n}$ for $\sigma=1$",
+        label=r"$\sigma/\sqrt{n}$",
     )
-    highlighted_sizes = np.array([5, 20, 80])
-    scaling_axis.scatter(
-        highlighted_sizes,
-        1 / np.sqrt(highlighted_sizes),
+    for scaling_size, scaling_color, scaling_marker, scaling_label in zip(
+        scaling_highlight_n,
+        [COLORS["blue"], COLORS["purple"], COLORS["vermillion"]],
+        ["o", "s", "X"],
+        [
+            f"Current n = {planning_n:,}",
+            f"Fourfold n = {4 * planning_n:,}",
+            f"Required n = {planning_required_n:,}",
+        ],
+    ):
+        scaling_axis.scatter(
+            scaling_size,
+            planning_sd / np.sqrt(scaling_size),
+            color=scaling_color,
+            marker=scaling_marker,
+            s=65,
+            zorder=3,
+            label=scaling_label,
+        )
+    scaling_axis.axhline(
+        planning_target_se,
         color=COLORS["vermillion"],
-        zorder=3,
-        label="Fourfold steps",
+        linestyle=":",
+        label=f"Target SE = {planning_target_se:.3f}",
     )
     scaling_axis.set(
-        xlabel="Sample size n",
+        xscale="log",
+        xlabel="Sample size n (log scale)",
         ylabel="Standard error of the mean",
-        xlim=(0, 200),
-        ylim=(0, 0.75),
+        ylim=(0, None),
     )
+    scaling_axis.xaxis.set_major_locator(
+        _ticker.LogLocator(base=10, subs=(1, 2, 5), numticks=8)
+    )
+    scaling_axis.xaxis.set_major_formatter(_ticker.StrMethodFormatter("{x:,.0f}"))
+    scaling_axis.xaxis.set_minor_formatter(_ticker.NullFormatter())
     scaling_axis.grid(linestyle=":", alpha=0.35)
     scaling_axis.legend(frameon=False, fontsize=8)
     scaling_figure.tight_layout()
-
+    precision_status = (
+        "The current sample size meets the target."
+        if planning_n >= planning_required_n
+        else f"The target requires {planning_required_n - planning_n:,} more independent observations."
+    )
+    precision_margin_note = (
+        f"At {precision_confidence.value:.0%} confidence, the planned margin is "
+        f"{planning_critical * planning_current_se:.3f} now and "
+        f"{planning_critical * planning_achieved_se:.3f} at the required n. "
+        if precision_mode.value == "Target margin of error"
+        else ""
+    )
     two_column_panel(
         mo.vstack(
             [
-                mo.stat("0.447", label="SE at n = 5", bordered=True),
-                mo.stat("0.224", label="SE at n = 20", bordered=True),
-                mo.stat("0.112", label="SE at n = 80", bordered=True),
+                precision_sd,
+                precision_n,
+                precision_mode,
+                precision_target,
+                precision_confidence,
+                mo.stat(
+                    f"{planning_required_n:,}",
+                    label="Required integer n",
+                    bordered=True,
+                ),
             ]
         ),
         mo.vstack(
@@ -1576,9 +1751,11 @@ def _(COLORS, FIGURE_SIZE_SHALLOW, mo, np, plt, two_column_panel):
                 scaling_figure,
                 mo.callout(
                     mo.md(
-                        "Each fourfold increase in independent sample size halves "
-                        "the standard error. Dependence reduces the effective amount "
-                        "of information and breaks this simple scaling."
+                        f"**Current SE: {planning_current_se:.3f}; at fourfold n: "
+                        f"{planning_current_se / 2:.3f}.** The population SD stays "
+                        f"{planning_sd:g}. At the required n, SE is {planning_achieved_se:.3f}. "
+                        f"{precision_margin_note}{precision_status} "
+                        "The horizontal axis uses a log scale to keep all three positions visible."
                     ),
                     kind="info",
                 ),
@@ -2187,7 +2364,11 @@ def _(mo):
     **Try this:** select **Mean** and click **Draw and run bootstrap**. The table
     highlights observations omitted or repeated in one resample; each resample
     still contains the original number of rows. The histogram collects the
-    statistic over all resamples. Run again at the same settings, then compare
+    statistic over all resamples. Change **Confidence level** from 95% to 99%:
+    both the percentile interval and the mean's analytic t interval widen, using
+    the same observed sample and the same bootstrap draws. Confidence updates
+    immediately; statistic and repetition settings apply only when you click
+    the button. Run again at the same settings, then compare
     **Median** and **Standard deviation**, clicking after each choice. Their
     distributions answer different estimation questions. More repetitions make
     the bootstrap interval more stable numerically; they add no new biological
@@ -2253,13 +2434,61 @@ def _(
 
 
 @app.cell
+def _(mo):
+    bootstrap_confidence = mo.ui.slider(
+        0.80,
+        0.99,
+        step=0.01,
+        value=0.95,
+        show_value=True,
+        full_width=True,
+        label="Confidence level (updates immediately)",
+    )
+    return (bootstrap_confidence,)
+
+
+@app.cell
+def _(bootstrap_confidence, get_bootstrap_result, np, original_height_values, stats):
+    bootstrap_result = get_bootstrap_result()
+    bootstrap_statistics = bootstrap_result["statistics"]
+    bootstrap_level = float(bootstrap_confidence.value)
+    bootstrap_alpha = 1 - bootstrap_level
+    bootstrap_lower, bootstrap_upper = np.quantile(
+        bootstrap_statistics, [bootstrap_alpha / 2, 1 - bootstrap_alpha / 2]
+    )
+    bootstrap_t_interval = None
+    if bootstrap_result["statistic_name"] == "Mean":
+        bootstrap_t_margin = stats.t.ppf(
+            1 - bootstrap_alpha / 2, df=len(original_height_values) - 1
+        ) * stats.sem(original_height_values)
+        bootstrap_t_interval = (
+            float(np.mean(original_height_values) - bootstrap_t_margin),
+            float(np.mean(original_height_values) + bootstrap_t_margin),
+        )
+    return (
+        bootstrap_level,
+        bootstrap_lower,
+        bootstrap_result,
+        bootstrap_statistics,
+        bootstrap_t_interval,
+        bootstrap_upper,
+    )
+
+
+@app.cell
 def _(
     COLORS,
     FIGURE_SIZE_STANDARD,
+    bootstrap_confidence,
+    bootstrap_level,
+    bootstrap_lower,
     bootstrap_repetitions,
+    bootstrap_result,
     bootstrap_statistic,
+    bootstrap_statistics,
+    bootstrap_t_interval,
+    bootstrap_upper,
     compact_table,
-    get_bootstrap_result,
     mo,
     np,
     original_height_values,
@@ -2268,9 +2497,6 @@ def _(
     run_bootstrap_button,
     two_column_panel,
 ):
-    bootstrap_result = get_bootstrap_result()
-    bootstrap_statistics = bootstrap_result["statistics"]
-    bootstrap_lower, bootstrap_upper = np.percentile(bootstrap_statistics, [2.5, 97.5])
     bootstrap_standard_error = float(np.std(bootstrap_statistics, ddof=1))
     bootstrap_counts = np.bincount(
         bootstrap_result["one_indices"], minlength=len(original_height_values)
@@ -2323,8 +2549,20 @@ def _(
         bootstrap_upper,
         color=COLORS["orange"],
         alpha=0.2,
-        label="95% percentile interval",
+        label=f"{bootstrap_level:.0%} percentile interval",
     )
+    if bootstrap_t_interval is not None:
+        bootstrap_axis.axvline(
+            bootstrap_t_interval[0],
+            color=COLORS["purple"],
+            linewidth=1.5,
+            label=f"{bootstrap_level:.0%} analytic t interval limits",
+        )
+        bootstrap_axis.axvline(
+            bootstrap_t_interval[1],
+            color=COLORS["purple"],
+            linewidth=1.5,
+        )
     bootstrap_axis.set(
         xlabel=f"Bootstrap {bootstrap_result['statistic_name'].lower()} [{statistic_unit}]",
         ylabel="Density",
@@ -2338,6 +2576,7 @@ def _(
             bootstrap_statistic,
             bootstrap_repetitions,
             run_bootstrap_button,
+            bootstrap_confidence,
             mo.stat(
                 f"{omitted_count} / {duplicated_count}",
                 label="Omitted / repeated observations",
@@ -2353,16 +2592,46 @@ def _(
             The original {bootstrap_result["statistic_name"].lower()} is
             {bootstrap_result["original_statistic"]:.2f} {statistic_unit}. The
             bootstrap SE is {bootstrap_standard_error:.2f} {statistic_unit}, and the
-            percentile interval is {bootstrap_lower:.2f} to {bootstrap_upper:.2f}
+            {bootstrap_level:.0%} percentile interval is {bootstrap_lower:.2f} to {bootstrap_upper:.2f}
             {statistic_unit}. Results come from {bootstrap_result["repetitions"]:,}
             resamples and vary slightly when rerun.
             """
         ),
         kind="info",
     )
+    bootstrap_comparison = mo.md(
+        "The analytic t interval is shown only for the mean; it does not estimate "
+        "uncertainty in the median, SD, or IQR."
+    )
+    if bootstrap_t_interval is not None:
+        bootstrap_comparison = mo.md(
+            f"**{bootstrap_level:.0%} analytic t interval for the mean: "
+            f"{bootstrap_t_interval[0]:.2f} to {bootstrap_t_interval[1]:.2f} cm.** "
+            "Both intervals use the same original sample. The t interval uses "
+            "the sample mean ± a t critical value × s/√n; it is exact for "
+            "independent normal observations and approximate otherwise. The "
+            "percentile interval uses empirical resampling quantiles and can "
+            "be asymmetric. They often agree when the mean's sampling distribution "
+            "is nearly normal; skewness, bias, small samples, and finite bootstrap "
+            "repetitions can cause differences. Neither method is universally "
+            "better, and both rely on an appropriate independent sampling design."
+        )
+    bootstrap_pending = (
+        bootstrap_statistic.value != bootstrap_result["statistic_name"]
+        or int(bootstrap_repetitions.value) != bootstrap_result["repetitions"]
+    )
+    bootstrap_run_note = mo.md(
+        "**Settings changed:** click **Draw and run bootstrap** to apply the "
+        "statistic and repetition settings. The display still describes the last run."
+        if bootstrap_pending
+        else "Confidence changes reuse these draws; click **Draw and run bootstrap** "
+        "for new resamples from the same observed data."
+    )
     two_column_panel(
         bootstrap_controls,
-        mo.vstack([bootstrap_figure, bootstrap_note]),
+        mo.vstack(
+            [bootstrap_figure, bootstrap_note, bootstrap_comparison, bootstrap_run_note]
+        ),
         widths=(1.35, 2.65),
     )
 
