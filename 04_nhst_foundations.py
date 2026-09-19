@@ -115,8 +115,18 @@ def _(np, stats):
             p_value = float(reference.cdf(statistic))
         else:
             p_value = float(2 * reference.sf(abs(statistic)))
+        difference = float(observed_mean - null_mean)
+        critical = reference.isf(alpha / 2 if alternative == "two-sided" else alpha)
+        margin = float(critical * standard_error)
+        interval = (
+            -np.inf if alternative == "less" else difference - margin,
+            np.inf if alternative == "greater" else difference + margin,
+        )
         return {
-            "difference": float(observed_mean - null_mean),
+            "difference": difference,
+            "standardized_effect": difference / scale,
+            "difference_interval": interval,
+            "interval_width": float(interval[1] - interval[0]),
             "standard_error": float(standard_error),
             "statistic": float(statistic),
             "degrees_of_freedom": None if test_type == "z" else sample_size - 1,
@@ -176,47 +186,50 @@ def _(np, stats):
         return 2.0 * stats.t.sf(np.abs(t_statistics), df=sample_sizes - 1)
 
     def simulate_pvalue_experiment(
-        effect, sample_size, repetitions, strategy, alpha, seed
+        sample_size, repetitions, strategy, alpha, seed, max_tests=5
     ):
+        if strategy == "interim" and not 1 <= max_tests <= sample_size - 4:
+            raise ValueError("Repeated checks require 1 to n − 4 distinct tests.")
         simulation_rng = np.random.default_rng(seed)
         reported_pvalues = np.empty(repetitions, dtype=float)
-        chunk_size = 2_000
+        test_count = 1 if strategy == "single" else max_tests
+        look_sizes = np.linspace(sample_size, 5, test_count, dtype=int)
+        rejection_counts = np.zeros(test_count, dtype=int)
+        chunk_size = 500
         for chunk_start in range(0, repetitions, chunk_size):
             chunk_stop = min(chunk_start + chunk_size, repetitions)
             chunk_count = chunk_stop - chunk_start
             if strategy == "single":
                 simulated_samples = simulation_rng.normal(
-                    effect, 1.0, size=(chunk_count, sample_size)
+                    0.0, 1.0, size=(chunk_count, sample_size)
                 )
-                chunk_pvalues = one_sample_t_pvalues(simulated_samples)
+                test_pvalues = one_sample_t_pvalues(simulated_samples)[:, None]
             elif strategy == "interim":
                 simulated_samples = simulation_rng.normal(
-                    effect, 1.0, size=(chunk_count, sample_size)
+                    0.0, 1.0, size=(chunk_count, sample_size)
                 )
-                look_sizes = np.unique(
-                    np.linspace(5, sample_size, num=min(5, sample_size - 4), dtype=int)
-                )
-                interim_pvalues = np.column_stack(
+                test_pvalues = np.column_stack(
                     [
                         one_sample_t_pvalues(simulated_samples[:, :look_size])
                         for look_size in look_sizes
                     ]
                 )
-                chunk_pvalues = interim_pvalues.min(axis=1)
             else:
                 simulated_samples = simulation_rng.normal(
-                    effect, 1.0, size=(chunk_count, 5, sample_size)
+                    0.0, 1.0, size=(chunk_count, test_count, sample_size)
                 )
-                outcome_pvalues = one_sample_t_pvalues(simulated_samples)
-                chunk_pvalues = outcome_pvalues.min(axis=1)
-            reported_pvalues[chunk_start:chunk_stop] = chunk_pvalues
+                test_pvalues = one_sample_t_pvalues(simulated_samples)
+            cumulative_pvalues = np.minimum.accumulate(test_pvalues, axis=1)
+            rejection_counts += (cumulative_pvalues <= alpha).sum(axis=0)
+            reported_pvalues[chunk_start:chunk_stop] = cumulative_pvalues[:, -1]
+        curve_rates = rejection_counts / repetitions
+        curve_mcse = np.sqrt(curve_rates * (1 - curve_rates) / repetitions)
         rejection_rate = float(np.mean(reported_pvalues <= alpha))
         monte_carlo_se = float(
             np.sqrt(rejection_rate * (1.0 - rejection_rate) / repetitions)
         )
         return {
             "p_values": reported_pvalues,
-            "effect": float(effect),
             "sample_size": int(sample_size),
             "repetitions": int(repetitions),
             "strategy": strategy,
@@ -224,6 +237,10 @@ def _(np, stats):
             "rejection_rate": rejection_rate,
             "monte_carlo_se": monte_carlo_se,
             "seed": int(seed),
+            "test_counts": np.arange(1, test_count + 1),
+            "curve_rates": curve_rates,
+            "curve_mcse": curve_mcse,
+            "look_sizes": look_sizes if strategy == "interim" else None,
         }
 
     lecture_coin = exact_binomial_details(13, 20, 0.5, "greater")
@@ -822,6 +839,41 @@ def _(mo):
     its own SD setting, and only the selected test's SD enters its calculation. Finally vary
     $\alpha$; the decision can change while the p-value stays fixed. These sliders
     describe hypothetical sample summaries rather than resampling raw birth weights.
+
+    **Effect versus precision:** keep both means and the selected SD fixed, then
+    compare $n=10$ with $n=40$. The raw difference and standardized effect stay
+    constant, while SE halves, the interval narrows, and (for a nonzero difference
+    in a two-sided test) the p-value falls. This is a controlled illustration,
+    not a sequence of newly sampled data.
+
+    The standardized effect expresses the observed difference in **SD units**.
+    For the t test, $d=(\bar x-\mu_0)/s$ is **Cohen's d for a one-sample comparison**:
+    it uses the SD estimated from the sample. For the z test,
+    $(\bar x-\mu_0)/\sigma$ uses the known population SD instead.
+    The test statistic divides by **SE** rather than SD, so it changes with n
+    even when the standardized effect stays fixed.
+    Neither a small p-value nor a large n makes the observed effect larger or
+    establishes biological importance.
+
+    The displayed $(1-\alpha)$ interval estimates $\mu-\mu_0$ in grams, treating
+    $\mu_0$ as fixed. It is two-sided for “Different mean”, a lower bound for
+    “Higher mean”, and an upper bound for “Lower mean”. One-sided intervals have
+    infinite total width.
+
+    **Connecting the interval to the test:** zero means no difference from the
+    null mean. If the interval excludes zero, the p-value is below the selected
+    threshold and we reject the null hypothesis. If zero lies inside the interval,
+    away from its endpoints, the p-value is above the threshold and we do not
+    reject. For example, a two-sided 95% interval that excludes zero corresponds
+    to a two-sided p-value below 0.05. Section 4 explores this connection further.
+
+    At the exact boundary, when an interval endpoint is zero, the p-value equals
+    the threshold. This notebook counts equality as rejection.
+
+    Confidence describes long-run coverage, not a probability assigned to this
+    fixed population difference. Assume independent observations and a normal
+    population for exact small-sample z/t inference, or a suitable large-sample
+    approximation.
     """)
 
 
@@ -1001,10 +1053,24 @@ def _(
     anatomy_axis.legend(frameon=False, fontsize=8)
     anatomy_figure.tight_layout()
 
+    anatomy_interval_low, anatomy_interval_high = anatomy_result["difference_interval"]
+    anatomy_interval_text = (
+        f"(−∞, {anatomy_interval_high:+.1f}] g"
+        if anatomy_alternative == "less"
+        else f"[{anatomy_interval_low:+.1f}, ∞) g"
+        if anatomy_alternative == "greater"
+        else f"[{anatomy_interval_low:+.1f}, {anatomy_interval_high:+.1f}] g"
+    )
+    anatomy_effect_label = (
+        "Effect / population σ" if anatomy_test_type == "z" else "Sample Cohen's d"
+    )
     anatomy_rows = pd.DataFrame(
         {
             "Component": [
                 "Difference",
+                anatomy_effect_label,
+                f"{100 * (1 - anatomy_alpha):.0f}% CI for μ − μ₀",
+                "Interval width",
                 "Standard error",
                 "Test statistic",
                 "Degrees of freedom",
@@ -1012,6 +1078,13 @@ def _(
             ],
             "Value": [
                 f"{anatomy_result['difference']:+.0f} g",
+                f"{anatomy_result['standardized_effect']:+.3f}",
+                anatomy_interval_text,
+                (
+                    f"{anatomy_result['interval_width']:.1f} g"
+                    if anatomy_alternative == "two-sided"
+                    else "∞ (one-sided)"
+                ),
                 f"{anatomy_result['standard_error']:.1f} g",
                 f"{anatomy_result['statistic']:.3f}",
                 (
@@ -1025,7 +1098,7 @@ def _(
     )
     anatomy_table = compact_table(
         anatomy_rows,
-        column_widths={"Component": 145, "Value": 125},
+        column_widths={"Component": 180, "Value": 210},
     )
     anatomy_decision = "reject" if anatomy_result["reject"] else "fail to reject"
     anatomy_symbol = "z" if anatomy_test_type == "z" else "t"
@@ -1050,12 +1123,11 @@ def _(
             mean_sample_size,
             mean_alpha,
             mean_alternative,
-            anatomy_table,
         ]
     )
     two_column_panel(
         anatomy_controls,
-        mo.vstack([anatomy_figure, anatomy_report]),
+        mo.vstack([anatomy_figure, anatomy_table, anatomy_report]),
         widths=(1, 2),
     )
 
@@ -1792,45 +1864,64 @@ def _(misconception_choice, review_feedback):
 @app.cell
 def _(mo):
     mo.md(r"""
-    ### Interactive laboratory: repeated testing and selective reporting
+    ### Interactive laboratory: more tests, more false alarms
 
-    Each simulated study draws independent standard-normal measurements and performs
-    one-sample, two-sided t tests against a null mean of zero. Compare:
+    **There is no real effect in any of these simulated studies.** The population
+    mean is always zero, but individual measurements vary randomly around it.
+    A statistically significant result is therefore a **false positive**: the test
+    suggests a difference when none exists.
+    We generate normally distributed measurements and use two-sided t tests,
+    so a change in either direction can count as significant.
 
-    - one pre-specified final test;
-    - up to five interim looks, reporting the smallest p-value;
-    - five outcomes, reporting the smallest p-value.
+    Imagine measuring the change in blood pressure after a treatment that actually
+    has no effect. We can use three testing strategies:
 
-    Under a true null, p-values from the single valid test are approximately uniform,
-    and about $\alpha$ of studies reject. The two data-dependent strategies answer a
-    different question but are incorrectly displayed here as if only one test had
-    been planned. This exposes their false-positive inflation.
+    - **Test once at the end.** Plan to study 20 people, collect all 20 measurements,
+      and test whether the mean change differs from zero. There is just one chance
+      to get a significant result.
+    - **Test repeatedly as data arrive.** Test after 5 people, again after 10, and
+      again after all 20. Count the study as significant if any test is significant.
+      The later tests include the earlier participants, so these are related checks
+      of the same data, not three separate studies.
+    - **Test several independent outcomes.** Imagine separate experiments measuring
+      blood-pressure change, heart-rate change, and cholesterol change, each in a
+      different group of people. None has a real effect. Test each outcome and report
+      whichever gives the smallest p-value. This simulation treats the outcomes as
+      independent: knowing one result tells us nothing about the others. Measurements
+      taken from the same people would often be related instead.
 
-    **Try this:** set the true standardized mean to 0 and use **One pre-specified
-    test**, then click **Run / resimulate studies**. Compare the rejection fraction
-    with $\alpha$ and inspect the p-value histogram. Run each of the other two
-    strategies with the same settings: reporting the smallest p-value can raise
-    the false-positive rate. Finally set the true mean to 0.5 and rerun the single
-    test; its rejection fraction now estimates power for that alternative.
+    In every strategy, each test uses the same threshold α. For example, α = 0.05
+    allows a 5% false-positive rate for **one planned test**. It does not guarantee
+    a 5% rate for a study that tries several tests and reports any significant result.
+    We make no correction for the extra tests here, so we can see what happens.
 
-    Every setting is applied only when the button is pressed; the displayed
-    caption records the completed run. Repeating a run shows simulation variation.
-    More simulated studies estimate the rejection rate more precisely, whereas
-    larger $n$ changes the evidence available within each study.
+    **Try this:** run **Test once at the end** with α = 0.05. About 5 in 100 studies
+    should give a false alarm. Then select **Test several independent outcomes**,
+    set the maximum to 10, and rerun. About 40 in 100 studies will give at least one
+    false alarm. Try **Test repeatedly as data arrive** too: the checks share data,
+    so the increase is different from that for independent outcomes.
+
+    **Reading the figures:** the first plot shows the fraction of studies with at
+    least one false alarm. Its first point always represents one test. The small
+    vertical bars show uncertainty due to the limited number of simulated studies
+    (approximate 95% intervals for each point). More simulated studies make these
+    bars smaller; they do not remove the problem of false alarms from extra tests.
+    The second plot shows the reported p-values: one per study, taking the smallest
+    if several tests were tried. The shaded area marks significant results.
+
+    Repeated checks start after at least five people, with at least one new person
+    between checks. With 10 people, at most six checks are possible (at 5 through
+    10 people). To try ten checks, set the final sample size to at least 14.
+    The number-of-tests slider adjusts to the selected strategy and sample size.
+
+    Click **Run / resimulate studies** to apply changed settings. Until then, the
+    figures show the previous run. Running again gives slightly different results
+    because new random measurements are generated.
     """)
 
 
 @app.cell
 def _(mo):
-    simulation_effect = mo.ui.slider(
-        -1.0,
-        1.0,
-        step=0.1,
-        value=0.0,
-        show_value=True,
-        full_width=True,
-        label="True standardized mean",
-    )
     simulation_sample_size = mo.ui.slider(
         5,
         80,
@@ -1859,17 +1950,16 @@ def _(mo):
     )
     simulation_strategy = mo.ui.dropdown(
         {
-            "One pre-specified test": "single",
-            "Up to five interim looks": "interim",
-            "Smallest p among five outcomes": "outcomes",
+            "Test once at the end": "single",
+            "Test repeatedly as data arrive": "interim",
+            "Test several independent outcomes": "outcomes",
         },
-        value="One pre-specified test",
-        label="Analysis strategy",
+        value="Test once at the end",
+        label="Testing strategy",
         full_width=True,
     )
     return (
         simulation_alpha,
-        simulation_effect,
         simulation_repetitions,
         simulation_sample_size,
         simulation_strategy,
@@ -1877,9 +1967,29 @@ def _(mo):
 
 
 @app.cell
+def _(mo, simulation_sample_size, simulation_strategy):
+    simulation_test_limit = (
+        min(10, int(simulation_sample_size.value) - 4)
+        if simulation_strategy.value == "interim"
+        else 1
+        if simulation_strategy.value == "single"
+        else 10
+    )
+    simulation_max_tests = mo.ui.slider(
+        1,
+        simulation_test_limit,
+        value=min(5, simulation_test_limit),
+        show_value=True,
+        full_width=True,
+        disabled=simulation_test_limit == 1,
+        label=f"Number of tests (maximum {simulation_test_limit} for these settings)",
+    )
+    return (simulation_max_tests,)
+
+
+@app.cell
 def _(mo, simulate_pvalue_experiment):
     initial_simulation_result = simulate_pvalue_experiment(
-        effect=0.0,
         sample_size=20,
         repetitions=10_000,
         strategy="single",
@@ -1897,21 +2007,21 @@ def _(
     set_simulation_result,
     simulate_pvalue_experiment,
     simulation_alpha,
-    simulation_effect,
     simulation_repetitions,
     simulation_sample_size,
     simulation_strategy,
+    simulation_max_tests,
 ):
     def run_pvalue_simulation(_value):
         fresh_seed = int(np.random.default_rng().integers(0, 2**32 - 1))
         set_simulation_result(
             simulate_pvalue_experiment(
-                effect=float(simulation_effect.value),
                 sample_size=int(simulation_sample_size.value),
                 repetitions=int(simulation_repetitions.value),
                 strategy=simulation_strategy.value,
                 alpha=float(simulation_alpha.value),
                 seed=fresh_seed,
+                max_tests=int(simulation_max_tests.value),
             )
         )
 
@@ -1933,11 +2043,11 @@ def _(
     np,
     plt,
     simulation_alpha,
-    simulation_effect,
     simulation_repetitions,
     simulation_run_button,
     simulation_sample_size,
     simulation_strategy,
+    simulation_max_tests,
     two_column_panel,
 ):
     pvalue_simulation_result = get_simulation_result()
@@ -1967,16 +2077,13 @@ def _(
         alpha=0.18,
         label=r"Reported $p\leq\alpha$",
     )
-    if (
-        pvalue_simulation_result["strategy"] == "single"
-        and pvalue_simulation_result["effect"] == 0.0
-    ):
+    if pvalue_simulation_result["strategy"] == "single":
         pvalue_axis.axhline(
             1.0,
             color=COLORS["gray"],
             linestyle="--",
             linewidth=1.5,
-            label="Uniform density under a true null",
+            label="Expected pattern with one test and no effect",
         )
     pvalue_axis.set(
         xlabel="Reported p-value",
@@ -1988,10 +2095,62 @@ def _(
     pvalue_axis.legend(frameon=False, fontsize=8, loc="upper right")
     pvalue_figure.tight_layout()
 
+    pvalue_curve_figure, pvalue_curve_axis = plt.subplots(figsize=FIGURE_SIZE_STANDARD)
+    pvalue_counts = pvalue_simulation_result["test_counts"]
+    pvalue_rates = pvalue_simulation_result["curve_rates"]
+    pvalue_margins = 1.96 * pvalue_simulation_result["curve_mcse"]
+    pvalue_curve_axis.errorbar(
+        pvalue_counts,
+        pvalue_rates,
+        yerr=np.vstack(
+            [
+                np.minimum(pvalue_margins, pvalue_rates),
+                np.minimum(pvalue_margins, 1 - pvalue_rates),
+            ]
+        ),
+        fmt="o-",
+        capsize=4,
+        color=COLORS["blue"],
+        label="Simulated false alarms (95% intervals)",
+    )
+    pvalue_curve_axis.axhline(
+        pvalue_simulation_result["alpha"],
+        color=COLORS["gray"],
+        linestyle=":",
+        label="Expected false alarms with one test: α",
+    )
+    if pvalue_simulation_result["strategy"] == "outcomes":
+        pvalue_curve_axis.plot(
+            pvalue_counts,
+            1 - (1 - pvalue_simulation_result["alpha"]) ** pvalue_counts,
+            "--",
+            color=COLORS["vermillion"],
+            label="Expected for independent outcomes",
+        )
+    pvalue_curve_axis.set(
+        xlabel="Number of tests included (k)",
+        ylabel="Fraction of studies with a false alarm",
+        xticks=pvalue_counts,
+        xlim=(0.7, max(pvalue_counts) + 0.3),
+        ylim=(0, 1),
+    )
+    pvalue_curve_axis.grid(axis="y", linestyle=":", alpha=0.35)
+    pvalue_curve_axis.legend(frameon=False, fontsize=8)
+    pvalue_curve_figure.tight_layout()
+    pvalue_schedule_note = mo.md(
+        "**How to read this curve:** start with the final test, then add earlier checks. Sample sizes, in the order added: "
+        + ", ".join(str(size) for size in pvalue_simulation_result["look_sizes"])
+        + ". Each point keeps all previous checks. Checks are at least one person apart and start no earlier than 5 people, so small samples allow fewer checks."
+        if pvalue_simulation_result["strategy"] == "interim"
+        else "**Completed run:** the first point tests one outcome; each further point adds another independent outcome."
+        if pvalue_simulation_result["strategy"] == "outcomes"
+        else "**Completed run:** one planned test after all measurements are collected."
+    )
+
     strategy_labels = {
-        "single": "one pre-specified test",
-        "interim": "up to five interim looks",
-        "outcomes": "the smallest result among five outcomes",
+        "single": "Test once at the end",
+        "interim": "Test repeatedly as data arrive",
+        "outcomes": "Test several independent outcomes",
     }
     pvalue_rate = pvalue_simulation_result["rejection_rate"]
     pvalue_mcse = pvalue_simulation_result["monte_carlo_se"]
@@ -2001,22 +2160,23 @@ def _(
     pvalue_note = mo.callout(
         mo.md(
             f"The last run used **{strategy_labels[pvalue_simulation_result['strategy']]}**, "
-            f"true mean {pvalue_simulation_result['effect']:+.1f}, n = "
+            f"{len(pvalue_simulation_result['test_counts'])} test(s), "
+            f"no real effect, n = "
             f"{pvalue_simulation_result['sample_size']}, and "
             f"{pvalue_simulation_result['repetitions']:,} studies. The fraction with "
-            f"reported p ≤ {pvalue_simulation_result['alpha']:.2f} was "
+            f"at least one false alarm (p ≤ {pvalue_simulation_result['alpha']:.2f}) was "
             f"**{pvalue_rate:.1%} ± {1.96 * pvalue_mcse:.1%}** (approximate 95% "
-            f"Monte Carlo margin)."
+            f"simulation margin)."
         ),
         kind=pvalue_note_kind,
     )
     pvalue_controls = mo.vstack(
         [
-            simulation_effect,
             simulation_sample_size,
             simulation_alpha,
             simulation_repetitions,
             simulation_strategy,
+            simulation_max_tests,
             simulation_run_button,
             mo.callout(
                 mo.md(
@@ -2026,19 +2186,21 @@ def _(
             ),
             mo.stat(
                 f"{pvalue_rate:.1%}",
-                label="Reported p ≤ α",
+                label="Studies with a false alarm",
                 bordered=True,
             ),
             mo.stat(
                 f"±{1.96 * pvalue_mcse:.1%}",
-                label="95% Monte Carlo margin",
+                label="95% simulation margin",
                 bordered=True,
             ),
         ]
     )
     two_column_panel(
         pvalue_controls,
-        mo.vstack([pvalue_figure, pvalue_note]),
+        mo.vstack(
+            [pvalue_curve_figure, pvalue_schedule_note, pvalue_figure, pvalue_note]
+        ),
         widths=(1, 2),
     )
 

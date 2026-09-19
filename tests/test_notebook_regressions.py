@@ -74,6 +74,167 @@ class NotebookRegressionTests(unittest.TestCase):
     def tearDown(self):
         plt.close("all")
 
+    def test_repeated_testing_curves_and_independent_null_formula(self):
+        simulate = run_cell(4, "simulate_pvalue_experiment")[
+            "simulate_pvalue_experiment"
+        ]
+        for strategy in ("single", "interim", "outcomes"):
+            result = simulate(20, 20_000, strategy, 0.05, 1729, max_tests=10)
+            rates = result["curve_rates"]
+            self.assertTrue(np.all(np.diff(rates) >= 0))
+            self.assertEqual(rates[-1], result["rejection_rate"])
+            self.assertAlmostEqual(rates[0], 0.05, delta=0.01)
+            np.testing.assert_allclose(
+                result["curve_mcse"], np.sqrt(rates * (1 - rates) / 20_000)
+            )
+            if strategy == "outcomes":
+                expected = 1 - 0.95 ** result["test_counts"]
+                self.assertTrue(
+                    np.all(abs(rates - expected) < 5 * result["curve_mcse"])
+                )
+            if strategy == "interim":
+                self.assertEqual(result["look_sizes"][0], 20)
+                self.assertEqual(result["look_sizes"][-1], 5)
+                self.assertEqual(len(set(result["look_sizes"])), 10)
+        edge = simulate(5, 1000, "interim", 0.05, 1, max_tests=1)
+        single = simulate(5, 1000, "single", 0.05, 1)
+        np.testing.assert_array_equal(edge["p_values"], single["p_values"])
+
+    def test_repeated_testing_slider_matches_available_distinct_checks(self):
+        simulate = run_cell(4, "simulate_pvalue_experiment")[
+            "simulate_pvalue_experiment"
+        ]
+        for n, limit in ((5, 1), (10, 6), (14, 10), (20, 10)):
+            widgets = run_cell(
+                4,
+                "simulation_max_tests",
+                simulation_sample_size=control(n),
+                simulation_strategy=control("interim"),
+            )
+            self.assertEqual(widgets["simulation_max_tests"].stop, limit)
+            for count in range(1, limit + 1):
+                result = simulate(n, 100, "interim", 0.05, 42, max_tests=count)
+                self.assertEqual(len(set(result["look_sizes"])), count)
+                self.assertEqual(len(result["test_counts"]), count)
+        with self.assertRaises(ValueError):
+            simulate(10, 100, "interim", 0.05, 42, max_tests=7)
+        for strategy, limit in (("single", 1), ("outcomes", 10)):
+            widgets = run_cell(
+                4,
+                "simulation_max_tests",
+                simulation_sample_size=control(5),
+                simulation_strategy=control(strategy),
+            )
+            self.assertEqual(widgets["simulation_max_tests"].stop, limit)
+
+    def test_repeated_testing_controls_wait_for_run_and_label_actual_results(self):
+        helpers = run_cell(4, "simulate_pvalue_experiment")
+        widgets = run_cell(4, "simulation_sample_size")
+        saved = [helpers["simulate_pvalue_experiment"](20, 1000, "outcomes", 0.05, 4)]
+        next_controls = widgets | {
+            "simulation_strategy": control("interim"),
+            "simulation_max_tests": control(1),
+            "simulation_sample_size": control(5),
+            "simulation_repetitions": control(1000),
+        }
+        callback = run_cell(
+            4,
+            "simulation_run_button",
+            **helpers,
+            **next_controls,
+            set_simulation_result=lambda value: saved.__setitem__(0, value),
+        )
+        result = run_cell(
+            4,
+            "pvalue_simulation_result",
+            **next_controls,
+            get_simulation_result=lambda: saved[0],
+            simulation_run_button=callback["simulation_run_button"],
+        )
+        self.assertEqual(
+            result["pvalue_curve_axis"].get_ylabel(),
+            "Fraction of studies with a false alarm",
+        )
+        self.assertEqual(len(result["pvalue_counts"]), 5)
+        self.assertEqual(len(result["pvalue_curve_axis"].lines), 5)
+        callback["run_pvalue_simulation"](None)
+        self.assertNotIn("simulation_effect", widgets)
+        self.assertEqual(saved[0]["strategy"], "interim")
+        self.assertEqual(len(saved[0]["test_counts"]), 1)
+        updated = run_cell(
+            4,
+            "pvalue_simulation_result",
+            **next_controls,
+            get_simulation_result=lambda: saved[0],
+            simulation_run_button=callback["simulation_run_button"],
+        )
+        self.assertEqual(
+            updated["pvalue_curve_axis"].get_ylabel(),
+            "Fraction of studies with a false alarm",
+        )
+        self.assertEqual(len(updated["pvalue_curve_axis"].lines), 4)
+
+    def test_mean_effect_precision_and_matched_intervals(self):
+        mean_test = run_cell(4, "one_sample_mean_test")["one_sample_mean_test"]
+        for test_type in ("z", "t"):
+            small = mean_test(2200, 3000, 900, 10, test_type, "two-sided", 0.05)
+            large = mean_test(2200, 3000, 900, 40, test_type, "two-sided", 0.05)
+            self.assertEqual(small["standardized_effect"], large["standardized_effect"])
+            self.assertAlmostEqual(small["standardized_effect"], -800 / 900)
+            self.assertEqual(small["difference"], large["difference"])
+            self.assertAlmostEqual(small["standard_error"], 2 * large["standard_error"])
+            self.assertLess(large["interval_width"], small["interval_width"])
+            self.assertLess(large["p_value"], small["p_value"])
+            for n in (2, 10, 100):
+                for alternative in ("less", "greater", "two-sided"):
+                    for observed in (2200, 3000, 3500):
+                        for alpha in (0.01, 0.05, 0.10):
+                            result = mean_test(
+                                observed, 3000, 900, n, test_type, alternative, alpha
+                            )
+                            low, high = result["difference_interval"]
+                            self.assertEqual(result["reject"], low > 0 or high < 0)
+                            self.assertEqual(np.isneginf(low), alternative == "less")
+                            self.assertEqual(
+                                np.isposinf(high), alternative == "greater"
+                            )
+                            if alternative != "two-sided":
+                                self.assertTrue(np.isinf(result["interval_width"]))
+            if test_type == "z":
+                expected = stats.norm.interval(0.95, loc=-800, scale=900 / np.sqrt(10))
+            else:
+                expected = stats.t.interval(0.95, 9, loc=-800, scale=900 / np.sqrt(10))
+            np.testing.assert_allclose(small["difference_interval"], expected)
+
+    def test_mean_explorer_displays_matching_effect_and_interval(self):
+        helpers = run_cell(4, "one_sample_mean_test")
+        widgets = run_cell(4, "mean_test_type")
+        for test_type in ("z", "t"):
+            for alternative in ("less", "greater", "two-sided"):
+                result = run_cell(
+                    4,
+                    "anatomy_result",
+                    **helpers,
+                    **(
+                        widgets
+                        | {
+                            "mean_test_type": control(test_type),
+                            "mean_alternative": control(alternative),
+                        }
+                    ),
+                )
+                self.assertIn(
+                    result["anatomy_interval_text"],
+                    result["anatomy_rows"]["Value"].tolist(),
+                )
+                self.assertIn(
+                    "Cohen" if test_type == "t" else "population",
+                    result["anatomy_effect_label"],
+                )
+                self.assertEqual(
+                    "∞" in result["anatomy_interval_text"], alternative != "two-sided"
+                )
+
     def test_lognormal_means_and_linked_densities(self):
         previous_ratio = 0
         for sigma in (0.1, 0.6, 1.5):
