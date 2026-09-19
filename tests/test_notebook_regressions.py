@@ -74,6 +74,53 @@ class NotebookRegressionTests(unittest.TestCase):
     def tearDown(self):
         plt.close("all")
 
+    def test_lognormal_means_and_linked_densities(self):
+        previous_ratio = 0
+        for sigma in (0.1, 0.6, 1.5):
+            for mu in (-1, 1, 3):
+                controls = {
+                    "lognormal_mu": control(mu),
+                    "lognormal_sigma": control(sigma),
+                }
+                result = run_cell(1, "lognormal_geometric", **controls)
+                population = result["lognormal_population"]
+                self.assertAlmostEqual(
+                    result["lognormal_arithmetic"], population.mean()
+                )
+                self.assertAlmostEqual(
+                    result["lognormal_geometric"], population.median()
+                )
+                self.assertAlmostEqual(population.expect(np.log), mu, places=6)
+                display = run_cell(
+                    1,
+                    "lognormal_raw_figure",
+                    **(
+                        result
+                        | {
+                            "lognormal_mu": mo.ui.slider(-1, 3, value=mu),
+                            "lognormal_sigma": mo.ui.slider(
+                                0.1, 1.5, step=0.1, value=sigma
+                            ),
+                        }
+                    ),
+                )
+                raw_axis = display["lognormal_raw_axis"]
+                self.assertEqual(raw_axis.get_xscale(), "linear")
+                self.assertAlmostEqual(population.cdf(raw_axis.get_xlim()[1]), 0.99)
+                for line, mean in zip(
+                    raw_axis.lines,
+                    (result["lognormal_geometric"], result["lognormal_arithmetic"]),
+                    strict=True,
+                ):
+                    np.testing.assert_allclose(line.get_xdata(), mean)
+                    self.assertLess(mean, raw_axis.get_xlim()[1])
+                np.testing.assert_allclose(
+                    display["lognormal_log_axis"].lines[0].get_xdata(), mu
+                )
+                plt.close("all")
+            self.assertGreater(result["lognormal_ratio"], previous_ratio)
+            previous_ratio = result["lognormal_ratio"]
+
     def test_precision_plan_is_minimal_and_fourfold_scaling_holds(self):
         for mode in ("Target SE", "Target margin of error"):
             for sd, target, level in ((10, 1, 0.95), (0.5, 5, 0.8), (20, 0.1, 0.99)):

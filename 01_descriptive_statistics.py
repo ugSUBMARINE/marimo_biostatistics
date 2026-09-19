@@ -1074,6 +1074,168 @@ def _(mo):
 
 @app.cell
 def _(mo):
+    mo.md(r"""
+    #### Explore multiplicative variation
+
+    These curves describe a **theoretical population**, not a sample or the height
+    dataset. Here $\log$ means the natural logarithm, and $X$ is a positive
+    measurement in a fixed reference unit.
+
+    **Try it:** hold μ fixed and increase σ. The geometric mean stays fixed while
+    the arithmetic mean rises as the right tail grows. Then increase μ: both means
+    are multiplied by the same factor. The axes rescale with the controls.
+    """)
+
+
+@app.cell
+def _(mo):
+    lognormal_mu = mo.ui.slider(
+        -1, 3, step=0.1, value=1, show_value=True, label="Log-scale mean μ"
+    )
+    lognormal_sigma = mo.ui.slider(
+        0.1, 1.5, step=0.1, value=0.6, show_value=True, label="Log-scale SD σ"
+    )
+    return lognormal_mu, lognormal_sigma
+
+
+@app.cell
+def _(lognormal_mu, lognormal_sigma, np, stats):
+    lognormal_geometric = float(np.exp(lognormal_mu.value))
+    lognormal_arithmetic = float(
+        np.exp(lognormal_mu.value + lognormal_sigma.value**2 / 2)
+    )
+    lognormal_ratio = lognormal_arithmetic / lognormal_geometric
+    lognormal_population = stats.lognorm(
+        s=lognormal_sigma.value, scale=lognormal_geometric
+    )
+    return (
+        lognormal_arithmetic,
+        lognormal_geometric,
+        lognormal_population,
+        lognormal_ratio,
+    )
+
+
+@app.cell
+def _(
+    COLORS,
+    FIGURE_SIZE_COMPACT,
+    lognormal_arithmetic,
+    lognormal_geometric,
+    lognormal_mu,
+    lognormal_population,
+    lognormal_ratio,
+    lognormal_sigma,
+    mo,
+    np,
+    plt,
+    responsive_row,
+    stats,
+):
+    lognormal_raw_figure, lognormal_raw_axis = plt.subplots(figsize=FIGURE_SIZE_COMPACT)
+    # A log-spaced grid resolves the peak while the displayed raw axis stays linear.
+    lognormal_raw_x = np.geomspace(
+        lognormal_population.ppf(0.0001), lognormal_population.ppf(0.99), 1200
+    )
+    lognormal_raw_axis.fill_between(
+        lognormal_raw_x,
+        lognormal_population.pdf(lognormal_raw_x),
+        color=COLORS["sky"],
+        alpha=0.5,
+    )
+    lognormal_raw_axis.axvline(
+        lognormal_geometric, color=COLORS["green"], label="Geometric mean / median"
+    )
+    lognormal_raw_axis.axvline(
+        lognormal_arithmetic,
+        color=COLORS["vermillion"],
+        linestyle="--",
+        label="Arithmetic mean",
+    )
+    lognormal_raw_axis.set(
+        title="Original scale: X",
+        xlabel="Positive measurement (reference units)",
+        ylabel="Density of X",
+        xlim=(0, lognormal_raw_x[-1]),
+        ylim=(0, None),
+    )
+    lognormal_raw_axis.legend(frameon=False, fontsize=8)
+    lognormal_raw_figure.tight_layout()
+
+    lognormal_log_figure, lognormal_log_axis = plt.subplots(figsize=FIGURE_SIZE_COMPACT)
+    lognormal_log_x = np.linspace(
+        lognormal_mu.value - 3.5 * lognormal_sigma.value,
+        lognormal_mu.value + 3.5 * lognormal_sigma.value,
+        600,
+    )
+    lognormal_log_axis.fill_between(
+        lognormal_log_x,
+        stats.norm.pdf(
+            lognormal_log_x, loc=lognormal_mu.value, scale=lognormal_sigma.value
+        ),
+        color=COLORS["sky"],
+        alpha=0.5,
+    )
+    lognormal_log_axis.axvline(
+        lognormal_mu.value, color=COLORS["green"], label="Mean of ln(X) = μ"
+    )
+    lognormal_log_axis.set(
+        title="Transformed scale: ln(X)",
+        xlabel="Natural logarithm of measurement",
+        ylabel="Density of ln(X)",
+        xlim=(lognormal_log_x[0], lognormal_log_x[-1]),
+        ylim=(0, None),
+    )
+    lognormal_log_axis.legend(frameon=False, fontsize=8)
+    lognormal_log_figure.tight_layout()
+
+    mo.vstack(
+        [
+            responsive_row([lognormal_mu, lognormal_sigma]),
+            responsive_row([lognormal_raw_figure, lognormal_log_figure], min_width=20),
+            responsive_row(
+                [
+                    mo.stat(
+                        f"{lognormal_geometric:.2f}",
+                        label="Population geometric mean",
+                        bordered=True,
+                    ),
+                    mo.stat(
+                        f"{lognormal_arithmetic:.2f}",
+                        label="Population arithmetic mean",
+                        bordered=True,
+                    ),
+                    mo.stat(
+                        f"{lognormal_ratio:.2f}×",
+                        label="Arithmetic / geometric mean",
+                        bordered=True,
+                    ),
+                ]
+            ),
+            mo.md(
+                rf"""
+                The mean of $\ln(X)$ is **{lognormal_mu.value:.1f}**;
+                back-transforming gives $\exp(\mu)$ = **{lognormal_geometric:.2f}**.
+                The arithmetic mean is $\exp(\mu+\sigma^2/2)$, so the ratio is
+                $\exp(\sigma^2/2)$ = **{lognormal_ratio:.2f}**.
+                One log-scale SD corresponds to multiplying or dividing the geometric
+                mean by $\exp(\sigma)$ = **{np.exp(lognormal_sigma.value):.2f}**.
+                This is multiplicative variation, as in positive concentrations or
+                fold changes.
+
+                Both plots show the same population. Their density heights differ
+                because the horizontal units differ. The raw view ends at the 99th
+                percentile (the rightmost 1% continues beyond it); the means use
+                the **entire** distribution. As σ approaches zero, the two means
+                approach one another.
+                """
+            ),
+        ]
+    )
+
+
+@app.cell
+def _(mo):
     mo.vstack(
         [
             mo.md(
