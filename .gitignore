@@ -6,3 +6,6 @@ __pycache__
 
 # untracked website files
 _site
+
+# Marimo files
+__marimo__
