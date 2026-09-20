@@ -462,7 +462,9 @@ def _(mo):
     vertical axis. Predict the sign of $r$, then switch the horizontal variable to
     temperature. Keep that pair selected and multiply $x$ by 100: covariance
     scales by 100, whereas $r$ stays the same. Finally try shifting both variables;
-    neither covariance nor $r$ changes.
+    neither covariance nor $r$ changes. Then choose **Multiply x by −1**: the
+    points flip left to right, covariance and $r$ reverse sign, and the strength
+    of the correlation stays the same.
 
     The left plot shows the observations and their means (dashed lines). The right
     plot subtracts those means: larger markers indicate larger absolute products
@@ -497,6 +499,7 @@ def _(mo):
         {
             "Original units": (1.0, 1.0, "original"),
             "Multiply x by 100": (100.0, 1.0, "x × 100"),
+            "Multiply x by −1": (-1.0, 1.0, "x × −1"),
             "Multiply y by 1,000": (1.0, 1000.0, "y × 1,000"),
             "Shift both variables": (1.0, 1.0, "shifted"),
         },
@@ -549,7 +552,11 @@ def _(
     )
     covariance_axes[0].set(
         title="Observed paired measurements",
-        xlabel=variable_labels[selected_x_name],
+        xlabel=(
+            f"−1 × {variable_labels[selected_x_name]}"
+            if x_multiplier == -1
+            else variable_labels[selected_x_name]
+        ),
         ylabel=variable_labels[selected_y_name],
     )
 
@@ -602,7 +609,8 @@ def _(
             f"The covariance is **{selected_details['covariance']:.3f}**, measured "
             f"in x-units × y-units, while $r$ is "
             f"**{selected_details['correlation']:.3f}** and has no unit. Positive "
-            "linear rescaling and shifting do not change the correlation. Blue "
+            "rescaling and shifting do not change the correlation. Multiplying x "
+            "by −1 reverses the signs of covariance and r, but leaves |r| unchanged. Blue "
             "points contribute positively; vermillion points contribute negatively."
         ),
         kind="info",
@@ -2199,15 +2207,26 @@ def _(mo):
 
     **Try this:** start with constant variance, then select **Curvature** and
     **Increasing variance**. For each dataset, first inspect the observations and
-    fitted line on the left, then look for a curve or fan in the residuals on the
-    right. The zero line represents a perfect prediction at an observation.
+    fitted line on the left, then look for a curve or fan in the middle plot. The zero line represents a perfect prediction at an observation.
     Compare **Two clusters** and **Influential outlier** next: can you identify
     the issue from $R^2$ alone?
 
     The selector replaces the simulated scenario and refits its line immediately.
     Returning to a scenario restores the same points, so comparisons are repeatable.
-    These plots address the shape and spread of residuals; independence must be
-    assessed from how observations were collected.
+    The middle plot shows where predictions miss: a curve suggests that a straight
+    line misses a pattern; a fan suggests that the size of the misses changes.
+
+    The **Q–Q plot** on the right uses the same residuals (observed minus predicted
+    values), sorted from smallest to largest. It compares their shape with a
+    normal, bell-shaped distribution. Points roughly along the reference line
+    suggest a similar shape; bends or distant end points suggest differences.
+    Some scatter is expected even with normally distributed errors. This is a
+    visual clue, not a pass/fail test. See **Chapter 5, Section 2: Assumptions and
+    graphical diagnostics** for the fuller explanation and more examples.
+
+    The Q–Q plot does not show where along the fitted line a problem occurs, so
+    read it together with the middle plot. Neither plot tells us whether one
+    observation depends on another; that requires knowing how the data were collected.
     """)
 
 
@@ -2231,17 +2250,23 @@ def _(mo):
 @app.cell
 def _(
     COLORS,
-    FIGURE_SIZE_LINKED,
+    FIGURE_SIZE_STANDARD,
     diagnostic_pattern,
     make_diagnostic_dataset,
     mo,
     plt,
     simple_regression,
+    stats,
     two_column_panel,
 ):
     diagnostic_x, diagnostic_y = make_diagnostic_dataset(diagnostic_pattern.value)
     diagnostic_model = simple_regression(diagnostic_x, diagnostic_y)
-    diagnostic_figure, diagnostic_axes = plt.subplots(1, 2, figsize=FIGURE_SIZE_LINKED)
+    diagnostic_figures, diagnostic_axes = zip(
+        *(
+            plt.subplots(figsize=(FIGURE_SIZE_STANDARD[0] / 2, FIGURE_SIZE_STANDARD[1]))
+            for _ in range(3)
+        )
+    )
     diagnostic_axes[0].scatter(diagnostic_x, diagnostic_y, color=COLORS["orange"])
     diagnostic_axes[0].plot(
         diagnostic_x, diagnostic_model["fitted"], color=COLORS["blue"], linewidth=2
@@ -2254,45 +2279,68 @@ def _(
     )
     diagnostic_axes[1].axhline(0, color=COLORS["blue"], linestyle="--")
     diagnostic_axes[1].set(
-        title="Residuals versus fitted values",
+        title="Residuals versus fitted",
         xlabel="Fitted response ŷ",
         ylabel="Residual e",
     )
+    (diagnostic_expected, diagnostic_ordered), (qq_slope, qq_intercept, _) = (
+        stats.probplot(diagnostic_model["residuals"], dist="norm")
+    )
+    diagnostic_axes[2].scatter(
+        diagnostic_expected, diagnostic_ordered, color=COLORS["purple"]
+    )
+    diagnostic_axes[2].plot(
+        diagnostic_expected,
+        qq_intercept + qq_slope * diagnostic_expected,
+        color=COLORS["blue"],
+        linestyle="--",
+    )
+    diagnostic_axes[2].set(
+        title="Residual Q–Q plot",
+        xlabel="Expected normal value",
+        ylabel="Sorted residual",
+    )
     for diagnostic_axis in diagnostic_axes:
         diagnostic_axis.grid(linestyle=":", alpha=0.3)
-    diagnostic_figure.tight_layout()
+    for diagnostic_figure in diagnostic_figures:
+        diagnostic_figure.tight_layout()
 
     diagnostic_messages = {
-        "Linear with constant variance": "A roughly patternless residual cloud is compatible with the simple linear mean and constant-spread model.",
-        "Curvature": "The curved residual pattern says that a straight conditional mean misses systematic structure.",
-        "Increasing variance": "The fan shape indicates that residual spread increases with the fitted response.",
-        "Two clusters": "Separated residual groups suggest an omitted grouping variable or mixture of processes.",
-        "Influential outlier": "One unusual response can strongly affect coefficients, uncertainty, and diagnostics; investigate it scientifically rather than deleting it automatically.",
+        "Linear with constant variance": "The misses show no obvious curve or fan. The Q–Q points need not sit exactly on the line, even in this example with normal errors.",
+        "Curvature": "The curve in the middle plot shows a pattern that the straight line misses. The Q–Q plot alone cannot locate that pattern.",
+        "Increasing variance": "The fan in the middle plot shows larger misses at larger predictions. The Q–Q plot mixes these smaller and larger misses together.",
+        "Two clusters": "The two groups suggest that information about group membership could help explain the observations. Read the original data alongside both residual plots.",
+        "Influential outlier": "One unusual observation can pull the fitted line and stand far from the Q–Q line. Investigate why it differs before deciding what to do with it.",
     }
-    two_column_panel(
-        mo.vstack(
-            [
-                diagnostic_pattern,
-                mo.stat(
-                    f"{diagnostic_model['r_squared']:.3f}",
-                    label="Fitted R²",
-                    bordered=True,
-                ),
-                mo.stat(
-                    f"{diagnostic_model['residual_sd']:.3f}",
-                    label="Residual SD",
-                    bordered=True,
-                ),
-            ]
-        ),
-        mo.vstack(
-            [
-                diagnostic_figure,
-                mo.callout(
-                    mo.md(diagnostic_messages[diagnostic_pattern.value]), kind="warn"
-                ),
-            ]
-        ),
+    diagnostic_controls = mo.vstack(
+        [
+            diagnostic_pattern,
+            mo.stat(
+                f"{diagnostic_model['r_squared']:.3f}",
+                label="Fitted R²",
+                bordered=True,
+            ),
+            mo.stat(
+                f"{diagnostic_model['residual_sd']:.3f}",
+                label="Residual SD",
+                bordered=True,
+            ),
+        ]
+    )
+    diagnostic_plots = mo.Html(
+        '<div class="residual-lab-plots">'
+        + "".join(
+            f"<div>{mo.as_html(figure).text}</div>" for figure in diagnostic_figures
+        )
+        + "</div>"
+    )
+    mo.vstack(
+        [
+            two_column_panel(diagnostic_controls, diagnostic_plots, widths=(1, 3)),
+            mo.callout(
+                mo.md(diagnostic_messages[diagnostic_pattern.value]), kind="warn"
+            ),
+        ]
     )
 
 
@@ -2484,6 +2532,105 @@ def _(
         ),
         widths=(1.35, 2.65),
     )
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ### From partial correlation to multiple regression
+
+    The example above asks how strongly nitrate and phosphate move together after
+    allowing for distance. Now ask **how much phosphate differs for a 1 mg/L
+    difference in nitrate**. We fit two models to the same 24 rivers:
+
+    - **Nitrate alone:** predicted phosphate = a + b × nitrate.
+    - **Nitrate and distance:** predicted phosphate = a + b × nitrate + c × distance.
+
+    In the second model, b compares rivers at the **same distance from the source**.
+    This is called multiple regression because the prediction uses more than one
+    measurement. Phosphate is in µg/L, nitrate in mg/L, and distance in km.
+    """)
+
+
+@app.cell
+def _(np, stats, water_data):
+    regression_comparison_rows = []
+    for comparison_label, comparison_columns in (
+        ("Nitrate alone", ["nitrate_mg_l"]),
+        ("Nitrate and distance", ["nitrate_mg_l", "distance_km"]),
+    ):
+        comparison_design = np.column_stack(
+            [
+                np.ones(len(water_data)),
+                water_data[comparison_columns].to_numpy(dtype=float),
+            ]
+        )
+        comparison_response = water_data["phosphate_ug_l"].to_numpy(dtype=float)
+        comparison_q, comparison_r = np.linalg.qr(comparison_design, mode="reduced")
+        comparison_coefficients = np.linalg.solve(
+            comparison_r, comparison_q.T @ comparison_response
+        )
+        comparison_errors = (
+            comparison_response - comparison_design @ comparison_coefficients
+        )
+        comparison_df = len(comparison_response) - comparison_design.shape[1]
+        comparison_inverse_r = np.linalg.solve(
+            comparison_r, np.eye(comparison_r.shape[0])
+        )
+        comparison_se = np.sqrt(
+            (comparison_errors @ comparison_errors / comparison_df)
+            * np.sum(comparison_inverse_r**2, axis=1)
+        )
+        comparison_margin = stats.t.ppf(0.975, comparison_df) * comparison_se[1]
+        regression_comparison_rows.append(
+            {
+                "Model": comparison_label,
+                "Nitrate slope": float(comparison_coefficients[1]),
+                "95% lower": float(comparison_coefficients[1] - comparison_margin),
+                "95% upper": float(comparison_coefficients[1] + comparison_margin),
+            }
+        )
+    return (regression_comparison_rows,)
+
+
+@app.cell
+def _(compact_table, pd, regression_comparison_rows):
+    unadjusted_nitrate_slope = regression_comparison_rows[0]["Nitrate slope"]
+    adjusted_nitrate_slope = regression_comparison_rows[1]["Nitrate slope"]
+    compact_table(
+        pd.DataFrame(regression_comparison_rows),
+        format_mapping={
+            name: "{:.2f}" for name in ("Nitrate slope", "95% lower", "95% upper")
+        },
+    )
+    return adjusted_nitrate_slope, unadjusted_nitrate_slope
+
+
+@app.cell
+def _(adjusted_nitrate_slope, mo, unadjusted_nitrate_slope):
+    mo.md(f"""
+    For each additional 1 mg/L of nitrate, predicted phosphate is
+    **{unadjusted_nitrate_slope:.2f} µg/L higher** when nitrate is used alone,
+    compared with **{adjusted_nitrate_slope:.2f} µg/L higher** when distance is
+    held fixed in the model. All three numeric columns use µg/L per mg/L.
+
+    The second slope is also the slope through the two sets of residuals in
+    the **Adjusted for distance** plot above. Its correlation measures strength
+    without units; this slope expresses the difference in measurement units.
+    The interval here comes from the full model, allowing for the extra
+    coefficient estimated for distance.
+
+    The 95% confidence intervals show uncertainty about each slope. The adjusted
+    interval includes zero: these data leave room for either direction of the
+    remaining association. The intervals assume a suitable straight-line model,
+    independent errors with a similar spread, and normally distributed errors
+    for the small-sample calculation. Residual checks and the way the rivers
+    were sampled matter when judging those assumptions.
+
+    Both concentrations tend to rise with distance, so including distance changes
+    the comparison. It does **not** show that changing nitrate would cause phosphate
+    to change, or that all other differences between rivers have been accounted for.
+    """)
 
 
 @app.cell

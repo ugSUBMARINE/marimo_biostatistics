@@ -432,6 +432,73 @@ class NotebookRegressionTests(unittest.TestCase):
             self.assertLess(low, heights.min())
             self.assertGreater(high, heights.max())
 
+    def test_river_adjusted_slope_matches_residual_slope(self):
+        helpers = run_cell(3, "generate_point_cloud")
+        rows = run_cell(3, "regression_comparison_rows", **helpers)[
+            "regression_comparison_rows"
+        ]
+        raw = stats.linregress(
+            helpers["water_data"]["nitrate_mg_l"],
+            helpers["water_data"]["phosphate_ug_l"],
+        )
+        self.assertAlmostEqual(rows[0]["Nitrate slope"], raw.slope)
+        self.assertAlmostEqual(
+            rows[0]["95% lower"], raw.slope - stats.t.ppf(0.975, 22) * raw.stderr
+        )
+        residual_fit = stats.linregress(
+            helpers["nitrate_residuals"], helpers["phosphate_residuals"]
+        )
+        self.assertAlmostEqual(rows[1]["Nitrate slope"], residual_fit.slope)
+        # Residual-only regression uses one too many degrees of freedom for its SE.
+        adjusted_margin = (
+            stats.t.ppf(0.975, 21) * residual_fit.stderr * np.sqrt(22 / 21)
+        )
+        self.assertAlmostEqual(
+            rows[1]["95% upper"], residual_fit.slope + adjusted_margin
+        )
+        self.assertLess(rows[1]["95% lower"], 0)
+        self.assertGreater(rows[1]["95% upper"], 0)
+
+    def test_residual_qq_uses_same_errors_for_every_scenario(self):
+        helpers = run_cell(3, "generate_point_cloud")
+        for pattern in (
+            "Linear with constant variance",
+            "Curvature",
+            "Increasing variance",
+            "Two clusters",
+            "Influential outlier",
+        ):
+            result = run_cell(
+                3,
+                "diagnostic_figures",
+                **helpers,
+                diagnostic_pattern=mo.ui.dropdown([pattern], value=pattern),
+            )
+            errors = result["diagnostic_model"]["residuals"]
+            np.testing.assert_allclose(
+                result["diagnostic_axes"][1].collections[0].get_offsets()[:, 1], errors
+            )
+            np.testing.assert_allclose(
+                result["diagnostic_axes"][2].collections[0].get_offsets()[:, 1],
+                np.sort(errors),
+            )
+            np.testing.assert_allclose(
+                result["diagnostic_expected"], stats.probplot(errors, fit=False)[0]
+            )
+
+    def test_negative_transformation_reflects_data_and_reverses_signs(self):
+        helpers = run_cell(3, "generate_point_cloud")
+        widgets = run_cell(3, "unit_transformation")
+        original = run_cell(3, "selected_details", **(helpers | widgets))
+        widgets["unit_transformation"]._update(["Multiply x by −1"])
+        reflected = run_cell(3, "selected_details", **(helpers | widgets))
+        np.testing.assert_array_equal(reflected["selected_x"], -original["selected_x"])
+        for name in ("covariance", "correlation"):
+            self.assertAlmostEqual(
+                reflected["selected_details"][name], -original["selected_details"][name]
+            )
+        self.assertIn("−1", reflected["covariance_axes"][0].get_xlabel())
+
     def test_scatter_extremes_remain_visible(self):
         helpers = run_cell(3, "generate_point_cloud")
         for slope in (-2, 2):

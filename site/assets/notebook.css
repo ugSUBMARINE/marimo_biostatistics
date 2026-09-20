@@ -160,3 +160,17 @@
   }
   .course-header .course-university img { width: 180px; }
 }
+
+/* Separate figures let the residual lab stack plots without shrinking their labels. */
+.residual-lab-plots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  align-items: start;
+}
+.residual-lab-plots > div { min-width: 0; }
+.residual-lab-plots img { width: 100%; height: auto; }
+
+@container (max-width: 800px) {
+  .residual-lab-plots { grid-template-columns: minmax(0, 1fr); }
+}
