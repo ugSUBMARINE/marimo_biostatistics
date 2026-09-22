@@ -1,6 +1,6 @@
 [project]
 name = "marimo-biostatistics"
-version = "0.3.0"
+version = "0.4.0"
 description = "Marimo notebook companion for the lecture course 'Biostatistics'"
 readme = "README.md"
 license = "MIT"
