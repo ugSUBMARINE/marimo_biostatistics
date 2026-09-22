@@ -391,23 +391,29 @@ def _(np, stats):
 @app.cell
 def _(mo):
     mo.md(r"""
-    Bayesian inference combines a probability model for unknown quantities with a
-    likelihood for observed data. The result is a posterior distribution whose
-    interpretation is always conditional on the model, prior, likelihood, and data.
+    How common is an allergy? What fraction of bacterial isolates are resistant to
+    an antibiotic? Bayesian statistics helps us update what we know about an
+    unknown quantity when new data arrive. Instead of reporting only one estimate,
+    we describe a range of possible values and how strongly each is supported.
+
+    Three terms will recur throughout this chapter: the **prior** describes our
+    uncertainty before using the current data; the **likelihood** describes how
+    well each possible value explains those data; and the **posterior** describes
+    our updated uncertainty. These conclusions depend on the assumptions we make
+    about the experiment and the population it represents.
 
     By the end of this chapter, you should be able to:
 
     1. distinguish frequentist and Bayesian probability statements;
-    2. apply Bayes' theorem using formulas and natural frequencies;
-    3. update probabilities for discrete hypotheses and a binomial proportion;
-    4. distinguish parameter uncertainty from posterior predictive uncertainty;
-    5. explain and diagnose a simple Metropolis sampler;
-    6. interpret posterior distributions from a Bayesian linear regression.
+    2. apply Bayes' theorem using formulas and expected counts of people;
+    3. update probabilities for competing explanations and for a population proportion;
+    4. distinguish uncertainty about a population from variation in a future sample;
+    5. explain how computer simulation estimates a posterior and check its reliability;
+    6. interpret a Bayesian regression relating river flow to oxygen concentration.
 
-    > **Two-minute preview:** Prior uncertainty is multiplied by the likelihood and
-    > normalized to form the posterior. Some posteriors are available exactly;
-    > others are approximated with dependent MCMC draws. In either case, the result
-    > is only as credible as the scientific model and data behind it.
+    > **Main idea:** Start with plausible possibilities, give more weight to those
+    > that better explain the observations, and report the uncertainty that remains.
+    > We first do this with simple calculations, then with computer simulation.
 
     **Prerequisites:** conditional probability, binomial models, confidence
     intervals, diagnostic tests, and simple linear regression from Chapters 2–5.
@@ -421,20 +427,28 @@ def _(mo):
 
     ## 1. Two interpretations of probability
 
-    In a frequentist model, parameters such as a population mean or prevalence are
-    fixed, while hypothetical samples and their intervals vary. Bayesian inference
-    represents uncertainty about a parameter with a probability distribution.
-    Neither approach removes the need for design, assumptions, or scientific judgment.
+    A **parameter** is a number describing a population or process, such as the
+    fraction of people with an allergy. This fraction is called **prevalence**.
+    Its true value is unknown; a sample gives us information about it.
+
+    A **frequentist** analysis evaluates how a method would perform if we repeatedly
+    collected new samples in the same way. A **Bayesian** analysis assigns
+    probabilities to possible parameter values to express our uncertainty given
+    the available information. The population fraction need not physically change:
+    it is our knowledge of it that changes. Both approaches require an appropriate
+    study design and assumptions.
 
     For the same observation—3 people with an allergy among 10—the intervals below
     may look similar while answering different questions.
 
-    **Read, then classify:** compare the interpretation column before choosing an
-    answer below. Ask what varies: the interval across repeated samples, or the
-    unknown parameter in a posterior distribution conditional on this model and
-    these data? The radio buttons reveal feedback; they do not recalculate either
-    interval. Classify the two probability statements independently of the
-    numerical endpoints.
+    A **95% confidence interval** comes from a method that includes the true
+    population fraction in at least 95% of repeated samples in this example.
+    A **95% credible interval** contains 95% of the Bayesian posterior probability
+    for that fraction, given the prior, model, and observed sample.
+
+    **Read, then classify:** decide whether each statement below concerns repeated
+    sampling or our uncertainty after observing this sample. The answer buttons
+    reveal feedback; they do not recalculate the intervals.
     """)
 
 
@@ -455,8 +469,8 @@ def _(compact_table, mo, pd, stats):
                     f"{bayesian_interval[0]:.3f} to {bayesian_interval[1]:.3f}",
                 ],
                 "Interpretation": [
-                    "Procedure has at least 95% long-run coverage",
-                    "95% posterior probability for p in this interval",
+                    "At least 95% of intervals from repeated samples contain the true fraction p",
+                    "Given the prior, model, and data, 95% probability that p is in this interval",
                 ],
             }
         ),
@@ -468,11 +482,13 @@ def _(compact_table, mo, pd, stats):
             interval_table,
             mo.callout(
                 mo.md(
-                    "The Bayesian interval uses a uniform $\\operatorname{Beta}(1,1)$ prior and a "
-                    "$\\operatorname{Beta}(4,8)$ posterior. Numerical resemblance does not make the "
-                    "two interpretations interchangeable. The exact binomial confidence "
-                    "interval is conservative: its coverage is at least 95%, not "
-                    "exactly 95% for every prevalence."
+                    "For the Bayesian interval, we initially give equal probability to "
+                    "equal-length ranges of $p$ between 0 and 1. This is a uniform "
+                    "$\\operatorname{Beta}(1,1)$ prior; the data update it to "
+                    "$\\operatorname{Beta}(4,8)$, explained in Section 5. The confidence "
+                    "interval method used here includes the true fraction in at least "
+                    "95% of repeated samples. This percentage is called its **coverage**. "
+                    "Similar endpoints do not make the two interpretations interchangeable."
                 ),
                 kind="info",
             ),
@@ -500,8 +516,9 @@ def _(mo, probability_statement, review_feedback):
     mo.vstack(
         [
             mo.md(
-                "**A.** Under repeated sampling, this exact binomial interval procedure "
-                "covers the fixed prevalence p at least 95% of the time.\n\n"
+                "**A.** If we repeatedly collected samples in the same way, at least "
+                "95% of the intervals calculated by this method would contain the "
+                "true population fraction p.\n\n"
                 "**B.** Given the model, prior, and observed data, 95% of the posterior "
                 "probability for p lies inside the reported credible interval."
             ),
@@ -509,11 +526,11 @@ def _(mo, probability_statement, review_feedback):
             review_feedback(
                 probability_statement.value,
                 correct_value="frameworks",
-                correct_text="**Correct.** A describes coverage of changing intervals across repeated samples with p fixed. B describes posterior uncertainty about p conditional on the observed data, prior, and model. Similar numerical endpoints do not make those probability statements interchangeable.",
+                correct_text="**Correct.** In A, each new sample gives a new interval, while the true population fraction stays fixed. In B, the probability describes our uncertainty about that fraction after using this sample, prior, and model.",
                 incorrect_text={
-                    "reversed": "The classifications are reversed. Statement A concerns the long-run coverage of "
-                    "intervals under repeated sampling; statement B concerns posterior uncertainty about "
-                    "p after conditioning on data and a model.",
+                    "reversed": "The classifications are reversed. A asks how often intervals from new samples "
+                    "would contain the true fraction. B describes uncertainty about that fraction "
+                    "given the observed data, prior, and model.",
                     "both_frequentist": "A is frequentist, but B assigns probability to the parameter after observing "
                     "the data. That is a Bayesian posterior statement, requiring a model and "
                     "prior.",
@@ -533,8 +550,13 @@ def _(mo):
 
     ## 2. Conditional probability and Bayes' theorem
 
-    The direction of conditioning matters: $P(A\mid B)$ is generally not
-    $P(B\mid A)$. Two factorizations of the same joint event give
+    **Conditional probability** means probability given some information.
+    $P(A\mid B)$ reads “the probability of A, given B”; the vertical bar means
+    “given.” For example, the chance of a positive test in someone with a disease
+    is different from the chance of disease in someone with a positive test.
+
+    $P(A\cap B)$ means the probability that both A and B occur. We can calculate it
+    in either order:
 
     $$P(A\cap B)=P(A)P(B\mid A)=P(B)P(A\mid B),$$
 
@@ -542,13 +564,20 @@ def _(mo):
 
     $$P(B\mid A)=\frac{P(B)P(A\mid B)}{P(A)}.$$
 
-    In Bayesian language, **posterior** is proportional to **prior × likelihood**.
-    The denominator—evidence or marginal likelihood—adds the corresponding products
-    over all mutually exclusive hypotheses so the posterior sums to one.
+    Let B be a possible explanation and A the observation. The **prior**, $P(B)$,
+    is its probability before the observation. The **likelihood**, $P(A\mid B)$,
+    asks how probable that observation would be if the explanation were true.
+    The **posterior**, $P(B\mid A)$, is its probability after the observation.
+    A likelihood is not itself the probability that the explanation is true.
 
-    A probability tree exposes the products along each branch; a contingency table
-    exposes the same denominator as a row or column total. The next example uses both
-    ideas as natural frequencies.
+    To update, multiply each explanation's prior by its likelihood, then divide
+    by the total of these products. This last step, called **normalizing**, makes
+    the updated probabilities add to 1. For a complete set of explanations that
+    cannot both be true, the total is $P(A)$, the overall probability of the
+    observation. It is also called the **evidence**.
+
+    The next example makes this calculation concrete with **natural frequencies**:
+    expected counts of people, such as “82 true positives among 1,000,000 tested.”
     """)
 
 
@@ -559,11 +588,23 @@ def _(mo):
 
     ## 3. Diagnostic tests, prevalence, and the base-rate effect
 
-    Sensitivity is $P(+\mid \text{sick})$ and specificity is $P(-\mid \text{healthy})$. Patients
-    usually need the reverse conditional, such as $P(\text{sick}\mid +)$. That positive
-    predictive value (PPV) depends strongly on disease prevalence. The negative predictive value (NPV)
-    measures the probability that a person who gets a negative test result truly does not have the disease
-    ($P(\text{healthy}\mid -)$).
+    Imagine screening a population for an infection. Here “sick” means the infection
+    is present and “healthy” means it is absent; these labels do not describe a
+    person's overall health. The symbols + and − mean positive and negative tests.
+
+    - **Sensitivity:** among people with the infection, the fraction who test
+      positive, $P(+\mid\text{sick})$.
+    - **Specificity:** among people without it, the fraction who test negative,
+      $P(-\mid\text{healthy})$.
+    - **Positive predictive value (PPV):** among people who test positive, the
+      fraction who actually have the infection, $P(\text{sick}\mid +)$.
+    - **Negative predictive value (NPV):** among people who test negative, the
+      fraction who do not have it, $P(\text{healthy}\mid -)$.
+
+    **Prevalence**, also called the base rate, is the fraction of the tested
+    population with the infection before the result is known. Even a test with
+    high sensitivity and specificity can produce mostly false positives when
+    the infection is very rare: there are so many more uninfected people to test.
 
     Let $p$ be prevalence, $\mathrm{Se}$ sensitivity, and $\mathrm{Sp}$ specificity,
     all expressed as proportions between 0 and 1. Bayes' theorem gives
@@ -580,7 +621,8 @@ def _(mo):
     natural-frequency table below, the same ratios are
     $\mathrm{PPV}=\mathrm{TP}/(\mathrm{TP}+\mathrm{FP})$ and
     $\mathrm{NPV}=\mathrm{TN}/(\mathrm{TN}+\mathrm{FN})$, where TP, FP, TN, and FN
-    are the corresponding expected counts.
+    mean true positives, false positives, true negatives, and false negatives.
+    “False” means the test result disagrees with the person's actual infection status.
 
     **Before moving the controls:** predict whether a positive result is more likely
     to be a true or false positive at the default prevalence of 0.01%.
@@ -597,6 +639,8 @@ def _(mo):
     the specificity that would be required—it does not set the actual specificity
     slider or change the current test's PPV. Prevalence, sensitivity, specificity,
     cohort size, and target PPV are hypothetical inputs for this teaching model.
+    The bar chart compresses large counts using a logarithmic scale away from zero;
+    use the table to compare exact counts.
     """)
 
 
@@ -764,8 +808,17 @@ def _(mo):
     ## 4. Sequential updating with dice
 
     Suppose one hidden die was selected from dice with 4, 6, 8, 12, or 20 sides.
-    Each die is a hypothesis. A roll contributes likelihood $1/s$ to a die with
-    $s$ sides if the result is possible, and likelihood zero otherwise.
+    Each die is a **hypothesis**, or possible explanation of the rolls. We assume
+    each die is fair, its faces are numbered 1 to its number of sides, and rolls
+    are independent once the die is chosen. For a die with $s$ sides, each possible
+    result has probability $1/s$; an impossible result has probability zero.
+    These probabilities are the likelihoods used in the update. “d6” means a
+    six-sided die.
+
+    After each roll, the posterior becomes the prior for the next roll. For
+    example, a 6 rules out d4 and favors d6 over d20 because a 6 is more probable
+    on d6. The same updating principle applies when successive experiments give
+    new information about an unknown biological quantity.
 
     **Try this:** select **All dice equally likely** and move the number of
     revealed rolls from 0 to 6, one step at a time. This reveals the fixed sequence
@@ -791,7 +844,9 @@ def _(mo):
     over all dice that remain possible. Reveal the first 7 and compare the plots:
     d4 and d6 are ruled out, but rolling a 1 through 6 is still possible on the
     larger dice. Before any rolls are revealed, this prediction uses the initial
-    prior; after observations, it is a **posterior predictive distribution**.
+    prior; after observations, it is a **posterior predictive distribution**:
+    probabilities for future results that include our uncertainty about which
+    die generated the data.
     """)
 
 
@@ -1090,31 +1145,57 @@ def _(mo):
 
     ## 5. Bayesian inference for a proportion
 
-    Let $p$ be the prevalence of an allergy. A beta prior and binomial likelihood
-    form a conjugate pair:
+    Let $p$ be the fraction of a population with an allergy. We observe $k$ people
+    with the allergy in a sample of $n$. The same calculation could describe
+    resistant isolates among independently sampled bacteria, or successful
+    cultures among independent attempts under the same conditions.
+
+    A **binomial model** describes a count when each observation has two possible
+    outcomes, observations are independent, and each has the same probability $p$.
+    Here “success” simply means the outcome being counted, even if it is an allergy
+    or antibiotic resistance. Assume that allergy status is measured correctly;
+    unlike Section 3, this example does not model test errors.
+
+    A **beta distribution** describes uncertainty about a proportion between 0 and 1.
+    Its two settings, $a$ and $b$, control its shape. The prior mean is $a/(a+b)$;
+    increasing $a+b$ while keeping this mean fixed concentrates the prior more
+    tightly around it. With $a=b=1$, the prior is flat: equal-length ranges of $p$
+    have equal probability.
+
+    In mathematical notation, “$\sim$” means “has the distribution”:
 
     $$p\sim \operatorname{Beta}(a,b),\qquad K\mid p\sim \operatorname{Binomial}(n,p).$$
 
-    Multiplying their kernels collects the powers of $p$ and $1-p$:
+    The capital $K$ represents the count before it is observed; $k$ is the actual
+    count. Multiplying the prior by the likelihood gives a particularly simple
+    update:
 
-    $$p^{a-1}(1-p)^{b-1}\;p^k(1-p)^{n-k}
-      =p^{a+k-1}(1-p)^{b+n-k-1}.$$
+    $$p\mid k,n\sim \operatorname{Beta}(a+k,b+n-k).$$
 
-    Thus $p\mid k,n\sim \operatorname{Beta}(a+k,b+n-k)$. The update behaves as if successes and
-    failures add information to the two prior shape parameters.
+    Add the $k$ counted outcomes to $a$ and the $n-k$ other outcomes to $b$.
+    For example, a Beta(1,1) prior and 3 people with an allergy out of 10 give
+    Beta(4,8). This convenient pairing is called **conjugate**: the posterior stays
+    in the same distribution family as the prior. The prior settings are not
+    extra people observed in the study.
+
+    **Reading the plot:** the prior and posterior curves show **probability
+    density**. Probability is the area under a curve over a range, not its height
+    at one point; a density can exceed 1. The shaded area contains 95% of the
+    posterior probability, leaving 2.5% on either side. The likelihood curve has
+    been rescaled to compare its shape; its height is not a probability for $p$.
 
     **Try this:** with $n=10$ and $k=3$, compare $a=b=1$ with $a=b=10$.
     Both priors have mean 0.5, but the second is more concentrated: watch the
-    posterior compromise between prior and likelihood. The controls labeled prior
-    successes/failures are beta shape parameters, not additional observed people.
+    posterior move between values favored by the prior and those favored by the data.
     Restore $a=b=1$, increase $n$ to 100, and then set $k=30$ to keep the observed
     proportion at 0.3. Compare posterior widths at the same observed proportion.
 
     All outputs update immediately. **Set $n$ before $k$:** changing $n$ rebuilds
-    the successes control and resets it to 3 (or to $n$ if smaller). The probability
-    threshold changes only the reported posterior tail area; it does not alter the
-    posterior or its credible interval. Interpret that area conditional on the
-    chosen prior and binomial model.
+    the count control and resets it to 3 (or to $n$ if smaller). The threshold $p_0$
+    changes only the reported probability that $p$ exceeds that value,
+    $P(p>p_0\mid\text{data})$. For example, $p_0=0.2$ asks how probable it is that
+    more than 20% of the population has the allergy. This probability depends on
+    the chosen prior and binomial model; moving the threshold does not change them.
     """)
 
 
@@ -1127,7 +1208,7 @@ def _(mo):
         value=1.0,
         show_value=True,
         full_width=True,
-        label="Prior successes a",
+        label="Prior shape a",
     )
     beta_prior_b = mo.ui.slider(
         0.5,
@@ -1136,7 +1217,7 @@ def _(mo):
         value=1.0,
         show_value=True,
         full_width=True,
-        label="Prior failures b",
+        label="Prior shape b",
     )
     beta_trials = mo.ui.slider(
         1,
@@ -1166,7 +1247,7 @@ def _(beta_trials, mo):
         value=min(3, int(beta_trials.value)),
         show_value=True,
         full_width=True,
-        label="Observed successes k",
+        label="Observed count k (with allergy)",
     )
     return (beta_successes,)
 
@@ -1288,16 +1369,23 @@ def _(mo):
     mo.md(r"""
     ### Posterior prediction: the next experiment
 
-    The posterior describes uncertainty about $p$. A posterior predictive
-    distribution describes future observations and averages the sampling model over
-    that uncertainty. For $m$ future trials it is beta-binomial.
+    “What fraction of the population has the allergy?” and “How many people in my
+    next sample will have it?” are different questions. The **posterior** answers
+    the first. The **posterior predictive distribution** answers the second,
+    allowing for both uncertainty about $p$ and chance variation in a new sample
+    from the same population. It combines predictions from possible values of $p$,
+    weighted by their posterior probabilities. For $m$ future observations, this
+    count distribution is called **beta-binomial**.
 
-    A plug-in prediction fixes $p$ at its posterior mean. It therefore omits
-    parameter uncertainty and is usually narrower than the full posterior predictive.
+    The comparison curve uses only the posterior mean of $p$, treating that value
+    as known. This shortcut is called a **plug-in prediction**. It includes chance
+    variation in the new sample but leaves out uncertainty about $p$.
 
     **Try this:** keep the prior and observed data in Section 5 fixed, then compare
     future sample sizes $m=1$, 20, and 100. At $m=1$ the two predictions coincide;
-    for larger samples, compare their tails and the two variances. Both predict
+    for larger samples, compare the probabilities of unusually low or high counts.
+    The reported **variance** measures how spread out the predicted counts are;
+    a larger value means more spread. Both predict
     **counts** of future successes, so changing $m$ also changes the horizontal
     scale. This control updates immediately and does not add observations to the
     posterior. To see how more existing evidence changes prediction, hold $m=20$
@@ -1413,20 +1501,50 @@ def _(mo):
 
     ## 6. Posterior computation with MCMC
 
-    Some posteriors cannot be normalized or sampled from directly. Markov-chain
-    Monte Carlo constructs dependent draws whose long-run distribution approximates
-    the posterior. Here a random-walk Metropolis step proposes a nearby value and
-    accepts it with probability
+    For the allergy example, we can calculate the posterior exactly. More complex
+    models often need a computer approximation. **Markov chain Monte Carlo (MCMC)**
+    explores possible parameter values by taking a sequence of random steps. Each
+    recorded value is a **draw**; the sequence is a **chain**. With a suitable
+    algorithm and enough exploration, the fraction of draws in a range estimates
+    that range's posterior probability. These draws are simulated parameter values,
+    not new experimental observations.
+
+    Here we use the **Metropolis algorithm**. Propose a random move from the current
+    value $\theta$ to a new value $\theta'$. Accept a move to a higher posterior
+    density; accept a move to a lower density with probability given by the ratio
+    below. If rejected, record the current value again. Accepting some moves to
+    lower density lets the chain explore uncertainty rather than simply find a peak.
+    For the symmetric proposals used here, the acceptance probability is
 
     $$\min\left(1,\frac{p(\theta'\mid D)}{p(\theta\mid D)}\right).$$
 
-    The unknown normalizing constant appears in numerator and denominator and
-    cancels. We calculate the ratio in log space. This beta-binomial example is
-    intentionally one we can solve exactly, so the analytic posterior provides a
-    visible check on the sampler.
+    Here $D$ denotes the observed data and $\theta$ is the allergy prevalence $p$.
+    The scaling factor that makes the posterior's total area equal to 1 cancels
+    in the ratio. The code uses logarithms to avoid numerical problems with very
+    small probabilities. We start with the exactly solvable allergy example so
+    that we can compare the simulated histogram with the true posterior.
+
+    **Reading the checks below:**
+
+    - A **trace plot** shows the recorded values in order. Chains started at
+      different values should explore similar ranges without a lasting upward or
+      downward drift. This exploration is often called **mixing**.
+    - **Autocorrelation** measures how strongly values within a chain resemble
+      earlier ones. **Lag** is their separation in steps. Correlation that stays
+      high over many steps means the chain is exploring slowly.
+    - **Effective sample size (ESS)** estimates how many independent draws would
+      provide comparable precision. Thousands of similar consecutive draws can
+      contain much less information than thousands of independent draws.
+    - **Split R-hat** compares variation within and between chain halves. A value
+      near 1 is reassuring; a clearly larger value warns that the chains disagree
+      or are still drifting. Agreement is not proof of adequate exploration.
+
+    The ESS and R-hat calculations here are simplified teaching diagnostics. Use
+    them together with the plots, rather than treating one number as a pass/fail test.
 
     **How to run:** choose the prior and observed data in Section 5, select a
-    proposal standard deviation and draws per chain here, then click **Run four
+    proposal standard deviation (SD, the scale of attempted moves) and draws per
+    chain here, then click **Run four
     new chains**. Until you click, the plots and diagnostics retain the previous
     run, including its previous prior and data. The initial run uses $a=b=1$,
     $n=10$, and $k=3$.
@@ -1435,12 +1553,14 @@ def _(mo):
     0.005, 0.1, and 0.5. Tiny proposals can be accepted frequently while exploring
     slowly; large proposals can be rejected frequently. Compare traces,
     autocorrelation, effective sample size (ESS), and agreement with the exact beta
-    density, not acceptance rate alone. Repeat a setting to see Monte Carlo variation.
+    density, not acceptance rate alone. Repeat a setting to see how the computer's
+    random draws change the approximation even though the data have not changed.
 
     **Inspect chain 1 through step** only reveals more of the existing early walk;
     it does not run a new chain or change the full-run diagnostics below. A new
     run resets this inspection slider to step 50. We discard the first 20% of
-    beta-model draws as warmup; the regression example uses 2,000 of 8,000 draws
+    beta-model draws as **warmup**, an initial period excluded to reduce the
+    influence of starting values; the regression example uses 2,000 of 8,000 draws
     (25%). These are teaching choices; the trace and convergence checks are
     needed to assess whether warmup was sufficient. Look for
     overlapping traces without persistent drift, decaying autocorrelation, and
@@ -1627,11 +1747,11 @@ def _(
     walk_figure.tight_layout()
     mean_acceptance = float(beta_walk_result["acceptance_rates"].mean())
     scale_message = (
-        "Very high acceptance often means tiny, sticky steps."
+        "Very high acceptance can occur when moves are too small to explore efficiently."
         if mean_acceptance > 0.75
-        else "Very low acceptance means proposals are often too ambitious."
+        else "Very low acceptance can occur when attempted moves are too large."
         if mean_acceptance < 0.15
-        else "The chain is moving with a useful balance of accepted and rejected proposals."
+        else "Both accepted and rejected moves occur; check the traces and ESS to assess exploration."
     )
     stored_settings = mo.callout(
         mo.md(
@@ -1722,11 +1842,12 @@ def _(
             mcmc_diagnostic_figure,
             mo.callout(
                 mo.md(r"""
-            Trust requires more than a plausible histogram. Chains should overlap and
-            mix, autocorrelation should decay, effective sample size should be
-            adequate, and split R-hat should be near one. More samples do not fix a bad
-            likelihood, prior, coding error, or non-converged chain; routine thinning
-            only discards information.
+            A smooth histogram alone is not enough. Check whether the chains explore
+            similar ranges, whether autocorrelation falls toward zero, and whether
+            ESS is large enough for the precision you need. Split R-hat should be
+            near 1. A longer run may help slow exploration, but it cannot repair
+            inappropriate model assumptions or coding errors. Keeping only every
+            tenth draw, for example, discards values without improving the walk itself.
             """),
                 kind="warn",
             ),
@@ -1741,30 +1862,68 @@ def _(mo):
 
     ## 7. Bayesian linear regression with Metropolis sampling
 
-    We return to the river data from Chapter 3 and model oxygen concentration from
-    flow speed. Standardizing flow speed improves the random walk's geometry:
+    We return to the 24 river observations from Chapter 3. How does average oxygen
+    concentration differ with flow speed, and how uncertain is this relationship?
+    Our model uses a straight line for the average and allows individual
+    observations to fall above or below it.
+
+    To make the computer's exploration easier, we subtract mean flow speed
+    $\bar x$ and divide by its standard deviation $s_x$. This **standardized**
+    flow speed, $z$, is zero at the sample mean and increases by 1 for each
+    standard deviation of flow speed:
 
     $$\text{Oxygen}_i\sim N(\alpha+\beta_z z_i,\sigma^2),\qquad
       z_i=\frac{x_i-\bar x}{s_x}.$$
 
-    The weakly informative priors are
+    Here $i$ labels an observation and $N(\mu,\sigma^2)$ means a normal (bell-shaped)
+    distribution with mean $\mu$ and standard deviation $\sigma$.
+    **$\alpha$** is mean oxygen at average flow speed; **$\beta_z$** is the change
+    in mean oxygen for a one-standard-deviation increase in flow speed.
+    **Residual SD $\sigma$** describes variation around the line that flow speed
+    does not explain, including other environmental differences and measurement
+    variation. We assume independent observations and the same residual SD at
+    every flow speed.
+
+    We use the following broad priors, whose biological plausibility we inspect
+    in Section 8:
 
     $$\alpha\sim N(7,5^2),\quad \beta_z\sim N(0,5^2),\quad
       \log\sigma\sim N(\log 2,0.75^2).$$
 
-    Four fixed-proposal chains use 8,000 draws each and discard the first 2,000 as
-    warm-up. The sampler is the same simple Metropolis mechanism as above, now in
-    three dimensions. Standardized samples are transformed back to intercept and
-    slope in the original scientific units.
+    These priors center average-flow oxygen at 7 mg/L and allow either a positive
+    or negative slope. Modeling $\log\sigma$ (the natural logarithm of $\sigma$)
+    ensures that $\sigma$ stays positive, with a prior median of 2 mg/L.
+    The squared numbers in the normal distributions are variances; their square
+    roots are standard deviations.
+
+    Four chains use 8,000 draws each and discard the first 2,000 as warmup.
+    Each Metropolis step now proposes values for all three unknown quantities.
+    Results are converted back to the original units: **slope $\beta_1$** is the
+    change in mean oxygen in mg/L per 1 m/s increase in flow speed, and
+    **intercept $\beta_0$** is the modeled mean at zero flow. Zero flow is outside
+    the observed range, so the intercept needs care as a biological interpretation.
+
+    In the table, **posterior mean** is the average of the retained draws and
+    **posterior SD** measures their spread, describing uncertainty about each
+    parameter. The 2.5% and 97.5% columns bound its 95% credible interval.
+    ESS and R-hat refer to the quantities used by the sampler ($\alpha$, $\beta_z$,
+    and $\log\sigma$), which are also shown in the diagnostic plots.
 
     **Read this worked example:** this fit runs automatically with fixed data and
     settings; the Section 6 controls do not change it. First read the slope and its
     95% posterior interval in mg/L per m/s, then compare the uncertainty band for
     mean oxygen with the wider predictive band for an individual river observation.
-    The latter includes residual variation as well as parameter uncertainty.
-    Inspect the posterior predictive check and chain diagnostics before interpreting
-    the slope. An association in these observational data is not a causal effect of
-    changing flow speed.
+    The wider band includes variation among individual observations as well as
+    uncertainty about the average. The bands give 95% intervals at each flow speed;
+    they do not give a 95% probability for an entire curve to stay inside a band.
+    In the **joint posterior** plot, each dot pairs an intercept and slope from
+    the same draw. Its shape shows how uncertainty in these two quantities is linked.
+
+    Inspect the chain diagnostics before interpreting the slope. The prediction
+    band illustrates uncertainty; it is not by itself a check that the model
+    describes the data adequately. Such a check would compare simulated datasets
+    with observed patterns, as discussed next. These observational data establish
+    an association, not the effect of experimentally changing flow speed.
     """)
 
 
@@ -1926,7 +2085,8 @@ def _(
             f"The mean acceptance rate is **{regression_acceptance.mean():.1%}** "
             f"(chain range {regression_acceptance.min():.1%}–{regression_acceptance.max():.1%}). "
             "The narrow band concerns the unknown mean oxygen response. The wider "
-            "posterior predictive interval also includes river-to-river residual variation."
+            "prediction band also includes variation among individual river observations "
+            "that flow speed does not explain."
         ),
         kind="info",
     )
@@ -1981,9 +2141,10 @@ def _(
             regression_diagnostic_figure,
             mo.callout(
                 mo.md(r"""
-            The chains start apart, pass through warm-up, and should settle into
-            overlapping stationary traces. The reported ESS and split R-hat
-            summarize, but do not replace, visual inspection.
+            Each column tracks one quantity used by the sampler: mean oxygen at
+            average flow, the slope for standardized flow, or the logarithm of
+            residual SD. After warmup, the chains should explore similar ranges
+            without lasting drift. Check these plots alongside ESS and split R-hat.
             """),
                 kind="warn",
             ),
@@ -1998,24 +2159,39 @@ def _(mo):
 
     ## 8. Bayesian workflow and responsible interpretation
 
-    A posterior is not the end of an analysis. A defensible workflow is:
+    A precise answer can still be misleading if the model is inappropriate. A
+    useful workflow connects the calculations back to the experiment:
 
-    1. define the biological question, observation unit, and generative model;
-    2. choose priors and inspect what they predict before seeing the data;
-    3. fit the model and diagnose the computation;
-    4. inspect posterior estimates and posterior predictive behavior;
-    5. check sensitivity to scientifically reasonable alternatives;
-    6. report the conditional nature and limitations of the inference.
+    1. **Define the question and what counts as an independent observation.**
+       Separate cultures may be independent; repeated readings from one culture
+       generally are not. Describe how the model represents variation in the data.
+    2. **Check the priors.** Simulate observations using only the priors and the
+       observation model. This **prior predictive check** asks whether the model
+       allows biologically reasonable results before it learns from the data.
+    3. **Fit the model and check the computation.** Use the chain plots, ESS, and
+       R-hat to assess whether the computer has explored the posterior adequately.
+    4. **Compare predictions with observations.** A **posterior predictive check**
+       simulates new datasets using the fitted model. For the river example, ask
+       whether they reproduce the observed spread and relationship with flow speed.
+       Systematic differences suggest something is missing from the model.
+    5. **Try reasonable alternative assumptions.** This is a **sensitivity analysis**:
+       check whether conclusions change with scientifically plausible priors or
+       models. Here “sensitivity” does not mean diagnostic-test sensitivity.
+    6. **Report estimates, uncertainty, and limitations.** Explain the assumptions,
+       how observations were collected, and which scientific claims the study supports.
 
     The regression prior below is deliberately broad. Prior predictive simulation
-    translates abstract parameter scales into oxygen concentrations where implausible
-    behavior is easier to recognize.
+    translates its settings into oxygen concentrations, making implausible
+    predictions easier to recognize. Negative concentrations are impossible;
+    25 mg/L is an illustrative upper reference here, not a universal biological limit.
 
     **Inspect, then decide:** find prior mean curves that enter the shaded negative
     oxygen region and read the fraction of simulated observations outside the
     illustrative 0–25 mg/L range. The gray curves describe possible mean relations;
-    the reported fraction also includes observation noise. Name one model check
-    that chain convergence cannot answer, then select a workflow conclusion to
+    the reported fraction also includes variation around those means. These are
+    prior predictions; the observed points are shown only for comparison and do
+    not update the curves. Name one biological assumption that agreement between
+    chains cannot verify, then select a workflow conclusion to
     reveal feedback. The answer buttons do not change the priors or refit the model.
     A useful follow-up question is which scientifically justified prior or likelihood
     alternatives should be compared before relying on the fitted relationship.
@@ -2091,17 +2267,17 @@ def _(
     audit_feedback = review_feedback(
         audit_choice.value,
         correct_value="full_workflow",
-        correct_text="**Correct.** Prior predictions assess what the model permits before seeing data; chain diagnostics assess computation; posterior predictions assess fit; and sensitivity checks assess dependence on defensible modeling choices. No single check replaces the others.",
+        correct_text="**Correct.** Check what the model predicts before fitting, whether the chains explore adequately, whether predictions after fitting resemble the data, and whether reasonable alternative assumptions change the conclusions. Each check answers a different question.",
         incorrect_text={
-            "diagnostics_only": "Split R-hat near one indicates agreement between chains, not that the scientific model is appropriate. Chains can agree while sampling a misspecified model; check predictions, design, and sensitivity as well.",
+            "diagnostics_only": "Split R-hat near one is reassuring about agreement between chains. They can still agree when the model makes biologically unrealistic assumptions. Check predictions, study design, and the effect of alternative assumptions as well.",
             "wider": "A wider prior allows more parameter values; it does not guarantee a more certain or more credible posterior. Inspect prior predictions and justify alternatives scientifically rather than choosing a prior to force precision.",
         },
     )
     prior_note = mo.callout(
         mo.md(
-            f"Across these fixed-seed prior predictive draws, **{implausible_fraction:.1%}** "
-            "of simulated oxygen values lie below 0 or above 25 mg/L. A prior called "
-            "'weak' on a coefficient scale can still imply scientifically implausible observations."
+            f"In this reproducible simulation before fitting, **{implausible_fraction:.1%}** "
+            "of simulated oxygen values lie below 0 or above 25 mg/L. Allowing a "
+            "broad range of intercepts and slopes can produce biologically implausible predictions."
         ),
         kind="warn",
     )
@@ -2164,7 +2340,7 @@ def _(mo):
     )
     review_prediction = mo.ui.radio(
         {
-            "It includes residual variation for a new observation": "residual",
+            "It includes variation of a new observation around the mean line": "residual",
             "It uses fewer posterior samples": "fewer",
             "It removes parameter uncertainty": "removes",
         },
@@ -2200,7 +2376,7 @@ def _(
                 review_feedback(
                     review_conditioning.value,
                     correct_value="ppv",
-                    correct_text="**Correct.** PPV is P(sick | positive); its denominator mixes true and false positives in proportions set partly by prevalence.",
+                    correct_text="**Correct.** PPV is P(sick | positive): true positives divided by all positive results. When disease is rare, false positives from the much larger group without disease can outnumber true positives.",
                     incorrect_text={
                         "sensitivity": "Sensitivity asks how often the test is positive among people with disease. The "
                         "question starts with a positive result and asks about disease status, so it "
@@ -2247,7 +2423,7 @@ def _(
                         "by each person. The interval expresses uncertainty about that proportion, not "
                         "variation among individual disease outcomes.",
                         "coverage": "Repeated-sampling coverage and posterior probability are different properties. A 95% "
-                        "credible interval contains 95% of the posterior mass given this model, prior, and "
+                        "credible interval contains 95% of the posterior probability given this model, prior, and "
                         "data; it does not automatically have 95% frequentist coverage.",
                     },
                 ),
@@ -2262,14 +2438,14 @@ def _(
                 review_feedback(
                     review_mcmc.value,
                     correct_value="separated",
-                    correct_text="**Correct.** Persistent separation after warmup suggests that chains have not adequately explored the same posterior. Pooling them can conceal poor mixing; inspect traces, split R-hat, and effective sample sizes before relying on the summary.",
+                    correct_text="**Correct.** If chains stay in different ranges after warmup, they may not have explored the posterior adequately. Combining their draws into one histogram can hide this problem. Inspect the separate traces, split R-hat, and ESS before using the results.",
                     incorrect_text={
                         "smooth": "Histogram smoothness depends partly on binning and draw count. A smooth pooled "
                         "histogram can still hide chains trapped in different regions; compare their traces, "
                         "split R-hat, and effective sample sizes.",
                         "acceptance": "There is no universal requirement of exactly 50% acceptance. Tiny steps may be "
-                        "accepted often yet mix poorly, and suitable acceptance rates depend on the "
-                        "proposal and target. Assess exploration and effective sample size together.",
+                        "accepted often yet explore slowly, and suitable acceptance rates depend on "
+                        "the attempted moves and posterior shape. Assess exploration and ESS together.",
                     },
                 ),
             ]
@@ -2277,17 +2453,17 @@ def _(
         mo.vstack(
             [
                 mo.md(
-                    "**5. In this Gaussian regression example, at the same flow speed and probability level, why is a posterior predictive interval generally wider than the credible interval for the mean response?**"
+                    "**5. At a given flow speed, why is the 95% prediction interval for a new river observation wider than the 95% credible interval for mean oxygen concentration?**"
                 ),
                 review_prediction,
                 review_feedback(
                     review_prediction.value,
                     correct_value="residual",
-                    correct_text="**Correct.** Prediction combines uncertainty in the mean response with observation-to-observation residual scatter.",
+                    correct_text="**Correct.** Even if we knew mean oxygen concentration exactly, individual observations would vary around it. Predicting a new observation includes this variation as well as uncertainty about the mean.",
                     incorrect_text={
-                        "fewer": "Using fewer draws affects Monte Carlo precision, not the target interval’s source of "
-                        "uncertainty. The predictive distribution is wider here because it includes "
-                        "new-observation noise as well as parameter uncertainty.",
+                        "fewer": "Using fewer computer draws makes the estimated interval less precise. "
+                        "The reason for the wider prediction interval is different: it includes "
+                        "variation among new observations as well as uncertainty about the mean.",
                         "removes": "Posterior prediction retains uncertainty in the fitted mean and adds variation of a "
                         "new observation around that mean. Removing parameter uncertainty would omit a source "
                         "of variation rather than explain the wider interval.",
@@ -2306,21 +2482,24 @@ def _(mo):
 
     ## 10. Summary and bridge
 
-    - Bayesian probabilities quantify uncertainty conditional on a model and prior;
-      frequentist probabilities describe repeated-sampling behavior.
-    - Bayes' theorem reverses a conditional by combining a prior with a likelihood
-      and normalizing over all hypotheses.
-    - Predictive values depend on prevalence even when sensitivity and specificity
-      are held fixed.
-    - Sequential updating passes each posterior forward as the next prior.
-    - The beta-binomial model provides an exact posterior and predictive distribution,
-      making it an ideal reference for learning MCMC.
-    - Metropolis draws are dependent. Trace plots, autocorrelation, ESS, multiple
-      chains, and split R-hat assess computation, not scientific model validity.
-    - Bayesian regression produces joint parameter distributions, credible bands for
-      mean responses, and wider predictive intervals for future observations.
-    - Every probability statement remains conditional on data quality, likelihood,
-      prior assumptions, and study design.
+    - **Prior → data → posterior:** update uncertainty by giving more weight to
+      explanations that better account for the observations. Each posterior can
+      become the prior when new data arrive.
+    - **Ask which probability you need.** The chance of a positive test given
+      disease differs from the chance of disease given a positive test. The latter
+      depends on how common the disease is in the tested population.
+    - **Keep the interval interpretations distinct.** A credible interval describes
+      uncertainty given this model, prior, and data. A confidence-interval method
+      is evaluated by how often its intervals contain the truth across new samples.
+    - **Separate estimation from prediction.** Estimating an allergy prevalence or
+      mean oxygen concentration differs from predicting a new sample or observation.
+      Prediction also includes variation among observations.
+    - **Check the computer's approximation.** MCMC draws are linked through the
+      steps of a chain. Use trace plots, autocorrelation, ESS, and split R-hat
+      together to assess whether exploration is adequate.
+    - **Check the biology too.** Reliable computation cannot rescue inappropriate
+      assumptions. Examine predictions, compare reasonable alternatives, and
+      consider study design and data quality before drawing scientific conclusions.
 
     **Bridge:** This final chapter changes the language of inference but preserves the
     course's central habit: begin with a scientific question and design, show the data,
