@@ -77,26 +77,30 @@ def _():
 @app.cell
 def _(mo):
     mo.md(r"""
-    Descriptive statistics summarize the observations in front of us. Inferential
-    statistics asks a harder question: **what can this finite sample tell us about a
-    wider population or about repetitions of the experiment that we did not observe?**
+    Descriptive statistics summarize the measurements we have. **Inferential
+    statistics** uses those measurements to learn about a larger group or about
+    future repetitions of an experiment, while describing how uncertain our
+    conclusions are. For example, how well does the mean enzyme activity in six
+    independent cultures estimate the mean activity under those growth conditions?
 
     By the end of this chapter, you should be able to:
 
-    1. distinguish populations, samples, estimands, estimators, and estimates;
-    2. connect probability mass functions, densities, and cumulative probabilities;
-    3. keep a population distribution, a sample distribution, and a sampling
-       distribution conceptually separate;
-    4. explain standard errors, confidence intervals, and long-run coverage;
-    5. use bootstrap resampling and first-order uncertainty propagation responsibly.
+    1. identify the population you want to study and the sample you measured;
+    2. read probabilities from graphs for counts and continuous measurements;
+    3. distinguish variation among individual measurements from variation among
+       averages calculated from repeated samples;
+    4. explain standard errors and confidence intervals in words;
+    5. use resampling and simulation to explore uncertainty in calculated results.
 
-    The simulations use artificial data and fixed initial seeds. Buttons marked
-    **Draw again** or **Run a new simulation** deliberately create a fresh random
-    result; unrelated controls do not make observations jump.
+    The simulations use artificial data. A **random seed** is a starting setting
+    that makes a simulation reproducible. Buttons marked **Draw again** or
+    **Run a new simulation** generate new random results; unrelated controls do
+    not change the observations.
 
-    > **Two-minute preview:** An estimate changes from sample to sample. A standard
-    > error describes that variation, while a confidence interval is produced by a
-    > procedure designed to capture the target parameter at a stated long-run rate.
+    > **Preview:** Repeating an experiment usually gives a different estimate.
+    > A standard error describes how much estimates vary across repetitions.
+    > A confidence interval expresses uncertainty using a method designed to
+    > include the true value in a stated proportion of repeated experiments.
     """)
 
 
@@ -243,14 +247,17 @@ def _(mo):
 
     ## 1. From a population to an estimate
 
-    A **population** is the set of observation units relevant to a question. It may
-    be finite, such as all students enrolled in a course, or conceptual, such as all
+    A **population** is the full group we want to learn about. An **observation
+    unit** is the entity being measured, such as a person or an independent culture.
+    The population may be finite, such as all students enrolled in a course, or conceptual, such as all
     repetitions of a particular assay under the same conditions.
 
-    A **sample** is the finite set of units actually observed. The **estimand** is the
-    population quantity we want (for example, the population mean), an **estimator**
-    is the rule used to estimate it (the sample mean), and the resulting number is
-    the **estimate**.
+    A **sample** is the subset we actually measure. A **parameter** is a number
+    describing the population, such as its mean enzyme activity. We estimate it
+    from the sample. Three terms distinguish the target, the calculation, and its
+    result: the **estimand** is the quantity we want to know; the **estimator** is
+    the calculation we use, such as taking an average; and the **estimate** is the
+    number obtained, such as 12 U/mL. Here, our target is the population mean.
 
     The explorer below uses a synthetic target population of 20,000 people. Each
     person is assigned to the female group with probability 0.55 or the male group
@@ -259,13 +266,15 @@ def _(mo):
     and SD 7.7 cm for the male group. The population is generated once with a fixed
     seed, so it remains unchanged while you compare sampling designs.
 
-    A **representative random sample** can draw from all 20,000 people. The
-    deliberately **biased sample** draws only from the male subgroup while its sample
+    The option **Representative random sample** gives every person among the
+    20,000 an equal chance of selection. An individual sample may still differ
+    from the population by chance. The deliberately **biased sample** draws only from the male subgroup while its sample
     mean is still compared with the mean of the complete mixed population. It
     therefore illustrates systematic exclusion of one subgroup, not a claim that
     male participants are intrinsically biased observations.
 
-    Sampling variability is not the same as sampling bias. Repeating a representative
+    **Sampling variability** means chance differences between samples.
+    **Sampling bias** means a systematic tendency to miss the target. Repeating a representative
     design produces varying estimates around the target; systematically excluding a
     subgroup can move the estimates away from the target.
     """)
@@ -435,6 +444,10 @@ def _(mo):
     measurement variation. Repeated measurements retain a link to the same unit;
     treating them as independent biological replicates is **pseudoreplication**.
 
+    For example, measuring enzyme activity three times in each of four independent
+    cultures gives four biological replicates, not twelve. The repeat readings help
+    assess measurement precision, but do not replace additional cultures.
+
     Before calculating anything, state the target population, the observation unit,
     and how units entered the sample. Precision formulas cannot rescue a mismatch
     between the sampling design and the scientific claim.
@@ -446,27 +459,38 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 2. Probability, random variables, PMFs, and CDFs
+    ## 2. Reading probabilities
 
-    A sample space $\Omega$ contains all possible outcomes. An **event** is a subset
-    of that space. Two events are mutually exclusive when they cannot occur together;
-    they are independent when learning that one occurred does not change the
-    probability of the other.
+    The **sample space**, written $\Omega$, is the set of all possible outcomes.
+    An **event** is an outcome or group of outcomes of interest, such as a cell
+    surviving treatment. Events are **mutually exclusive** if they cannot happen
+    together. They are **independent** if knowing that one happened does not change
+    the probability of the other. These are different ideas: survival and death
+    of the same cell are mutually exclusive, but not independent.
 
-    A random variable maps outcomes to numbers. For a discrete random variable, the
-    probability mass function (PMF) gives $P(X=x)$ and the cumulative distribution
-    function (CDF) gives $F_X(x)=P(X\leq x)$.
+    A **random variable** is a numerical outcome that can vary, such as the number
+    of surviving cells. For **discrete** outcomes, such as whole-number counts, the
+    **probability mass function (PMF)** gives the probability of each value:
+    $P(X=x)$. The **cumulative distribution function (CDF)** adds up probabilities
+    up to a chosen value: $F_X(x)=P(X\leq x)$. Thus $F_X(5)$ is the probability of
+    observing five or fewer survivors.
+
+    The **expected value** $E(X)$ is the average we would approach over many
+    repetitions. The **variance** $\operatorname{Var}(X)$ measures spread using
+    squared distances from that average. Its square root is the **standard
+    deviation (SD)**, expressed in the original measurement units:
 
     $$E(X)=\sum_x xP(X=x), \qquad
       \operatorname{Var}(X)=\sum_x[x-E(X)]^2P(X=x).$$
 
-    The sum of two fair dice is a useful reminder that equally likely elementary
-    outcomes need not produce equally likely values of a derived random variable.
-    The laboratory also simulates repeated rolls: blue markers show the observed
-    relative frequencies, while the orange bars show the exact PMF obtained by
-    enumerating every possible outcome. Increasing the number of simulated rolls
-    usually brings the markers closer to the exact probabilities. A fixed random
-    seed keeps this comparison stable while you change the controls.
+    Here $\sum_x$ means “add over all possible values of $x$.” Each value contributes
+    according to its probability.
+
+    Two fair dice make these ideas easy to see. Each ordered pair is equally
+    likely, but a sum of 7 can occur in more ways than a sum of 2. Orange bars show
+    exact probabilities calculated from all possible pairs. Blue markers show the
+    fraction of simulated rolls giving each sum. More rolls usually bring those
+    fractions closer to the exact probabilities.
     """)
 
 
@@ -495,8 +519,9 @@ def _(mo):
     mo.md(r"""
     **Try this:** with six-sided dice, select the interval $(6,9]$. It includes
     sums 7, 8, and 9, but excludes 6. Compare the highlighted probability masses
-    with the CDF difference $F(9)-F(6)$. Increase simulated rolls from 100 to
-    10,000 and compare the empirical frequencies with the exact probabilities;
+    with the CDF difference $F(9)-F(6)$: the probability of 9 or less minus the
+    probability of 6 or less. Increase simulated rolls from 100 to
+    10,000 and compare the observed fractions with the exact probabilities;
     simulation precision improves, while the theoretical model stays fixed.
     Then change the number of sides: this changes the possible sums and their
     probabilities. All controls update immediately, and the same random seed
@@ -681,7 +706,8 @@ def _(
             $F({interval_b})-F({interval_a})={cdf_at_b:.3f}-{cdf_at_a:.3f}
             ={exact_interval_probability:.3f}$. The blue simulation approaches the
             exact orange PMF as the number of rolls increases, but its small mismatch
-            is ordinary Monte Carlo variation.
+            is random variation from using a finite number of simulated rolls.
+            Simulation using random draws is called **Monte Carlo simulation**.
             """
         ),
         kind="info",
@@ -702,13 +728,19 @@ def _(mo):
 
     ### Binomial counts
 
-    If $X$ counts successes in $n$ independent trials with the same success
-    probability $p$, then
+    The **binomial model** describes how many of a fixed number of trials have a
+    particular outcome. For example, among $n$ cells, how many survive treatment?
+    “Success” simply names the outcome being counted. If trials are independent
+    and each has the same survival probability $p$, then
 
     $$P(X=k)=\binom{n}{k}p^k(1-p)^{n-k}, \qquad
       E(X)=np, \qquad \operatorname{Var}(X)=np(1-p).$$
 
-    The assumptions matter: the number of trials is fixed, each outcome is binary,
+    Here $k$ is the number surviving, and $\binom{n}{k}$ counts the ways to choose
+    those $k$ survivors from $n$ cells.
+
+    The assumptions matter: the number of trials is fixed, each outcome is binary
+    (one of two possibilities, here surviving or not surviving),
     $p$ is constant, and trials are independent. Cells sharing a culture environment,
     for example, may respond together rather than independently.
     """)
@@ -829,13 +861,17 @@ def _(mo):
     mo.md(r"""
     ### Poisson event rates
 
-    A Poisson model describes a count in a defined interval when events occur at
-    rate $\lambda$:
+    A **Poisson model** can describe the number of events in a fixed time interval
+    when events occur independently at a constant average rate. Its parameter
+    $\lambda$ is the **expected count in that interval**, not the rate itself:
+    $\lambda=\text{rate}\times\text{time}$. For example, 2 events per hour observed
+    for 3 hours gives $\lambda=6$. The probability of exactly $k$ events is
 
     $$P(X=k)=e^{-\lambda}\frac{\lambda^k}{k!}, \qquad
       E(X)=\operatorname{Var}(X)=\lambda.$$
 
-    A rate is not a probability. Doubling the observation interval doubles the
+    Here $k!$ means $k\times(k-1)\times\cdots\times1$, with $0!=1$.
+    A rate is not a probability and can exceed 1 event per hour. Doubling the observation interval doubles the
     expected count, provided the underlying event rate remains stable. A sample
     variance much larger than its mean signals **overdispersion** and suggests that
     rates differ among units or events are dependent.
@@ -969,20 +1005,29 @@ def _(
 @app.cell
 def _(mo):
     mo.md(r"""
-    ### Continuous distributions and the normal model
+    ### Continuous measurements and the normal model
 
-    A probability density is not a probability. For a continuous random variable,
-    $P(X=x)=0$ at any exact value; probability is **area** under the density over an
-    interval. A narrow density may therefore rise above one while retaining total
-    area one. The explorer restricts $\sigma$ to 0.5–2.0 for a readable shared scale;
-    narrower distributions outside that range could have peaks above one.
+    A **continuous** model describes measurements such as height or concentration
+    on a scale without gaps. Its **probability density** is a curve whose area over
+    an interval gives the probability of a value in that interval. The height of
+    the curve is not itself a probability. The total area is 1, even when a narrow
+    curve has a peak above 1. Try an SD of 0.2 in the explorer to see this.
 
-    For $X\sim N(\mu,\sigma^2)$, standardization gives
+    In a continuous model, one exact value has probability zero because it has no
+    width. Actual instruments record rounded values: a reading of 1.20 represents
+    a small interval, not an infinitely precise point.
+
+    The **normal distribution** is the familiar symmetric bell-shaped model.
+    $X\sim N(\mu,\sigma^2)$ means that $X$ follows this model with mean $\mu$ and
+    SD $\sigma$ (so $\sigma^2$ is its variance). **Standardizing** subtracts the
+    mean and divides by the SD:
 
     $$Z=\frac{X-\mu}{\sigma}\sim N(0,1), \qquad
       P(a<X\leq b)=F_X(b)-F_X(a).$$
 
-    Normality is a model to assess, not an automatic property of biological data.
+    Thus $Z=2$ means “two SDs above the mean.” The CDF difference gives the area
+    between $a$ and $b$. Biological measurements need not follow a normal model;
+    concentrations, for example, can have a long tail towards high values.
     """)
 
 
@@ -1139,10 +1184,18 @@ def _(mo):
 
     ## 4. Estimators, standard errors, and the Central Limit Theorem
 
-    Before observing data, an estimator is a random variable: a different random
-    sample would generally produce a different estimate. The distribution of an
-    estimator over repeated samples is its **sampling distribution**, and the
-    standard deviation of that distribution is its **standard error**.
+    Imagine repeating a culture experiment many times, each time using a new set
+    of independent cultures and calculating their mean enzyme activity. The means
+    will differ. Their distribution is the **sampling distribution of the mean**.
+    Its standard deviation is the **standard error (SE)** of the mean.
+
+    **SD describes differences among individual observations; SE describes
+    differences among estimates from repeated samples.** SE does not tell us how
+    far this particular estimate is from the true value.
+
+    Below, $n$ is the number of independent observations, $\bar X$ is their mean,
+    and $\sigma$ is the population SD. Usually $\sigma$ is unknown, so we estimate
+    the mean's SE using the sample SD $s$: $\widehat{\mathrm{SE}}=s/\sqrt n$.
 
     For independent observations with population variance $\sigma^2$,
 
@@ -1164,8 +1217,9 @@ def _(mo):
     estimates from 5,000 samples, computed using either $n$ or $n-1$ in the
     denominator. Compare their average estimates with the true variance of 1.
     The correction matters most at small $n$. Switch to the right-skewed
-    population: unbiasedness concerns the average across samples, not an
-    assurance that every corrected estimate is close to 1. Settings update
+    population (one with a long tail towards high values): an **unbiased** method
+    is correct on average across repeated samples. This does not guarantee that
+    every corrected estimate is close to 1. Settings update
     immediately using a fixed simulation seed.
     """)
 
@@ -1317,9 +1371,18 @@ def _(mo):
     2. The **sample distribution** describes the observed values in one sample.
     3. The **sampling distribution** describes one statistic across repeated samples.
 
-    The Central Limit Theorem concerns the third distribution. Under suitable
-    conditions, the sampling distribution of the mean becomes approximately normal
-    as $n$ grows; it does not make the population or raw sample normal.
+    A **statistic** is a number calculated from a sample, such as a mean or median.
+    The **Central Limit Theorem (CLT)** concerns the third distribution: for
+    independent observations drawn from the same population with finite, nonzero
+    variance, the distribution of sample means becomes approximately bell-shaped
+    as $n$ grows. Individual measurements need not become bell-shaped.
+    There is no universal sample-size cutoff: strongly asymmetric populations or
+    frequent extreme values can require much larger samples.
+
+    In the controls, **right-skewed** means a long tail towards high values;
+    **bounded uniform** means values are equally likely across a limited range;
+    **bimodal** means two peaks; and **heavy-tailed** means extreme values occur
+    more often than under a normal model.
 
     **Try this:** choose **Right-skewed**, **Mean**, and $n=2$, then click
     **Run a new simulation**. Read the three panels from left to right:
@@ -1545,18 +1608,23 @@ def _(mo):
 
     Choose a target **SE** or a two-sided confidence interval's **margin of
     error** (half its width), in the same units as the measurements. With
-    $z=z_{1-\alpha/2}$, the planning rules are
+    $m$ denoting that margin and $z$ a multiplier chosen for the confidence level
+    ($z\approx1.96$ for 95%), the planning rules are
 
     $$n_{\rm SE}=\left\lceil(\sigma/\mathrm{SE}_{\rm target})^2\right\rceil,
     \qquad n_{\rm margin}=\left\lceil(z\sigma/m)^2\right\rceil.$$
 
+    The brackets $\lceil\ \rceil$ mean “round up to a whole number.”
+
     These rules assume independent observations from a population with a fixed,
     finite SD. Supply a plausible population SD from prior information; an
     uncertain planning SD makes the required $n$ uncertain too. The margin rule
-    is exact for a normal mean with known SD. For non-normal populations it uses
+    is exact for independent normal observations with known population SD. For non-normal populations it uses
     a normal approximation; when SD must be estimated, a t interval has a random
-    width and this z-based plan is only an approximation. This plans precision,
-    not power, and does not correct sampling bias or dependence.
+    width and this z-based plan is only an approximation. This plans how precisely
+    we estimate a mean. It does not calculate **statistical power** (see chapter 4), the chance of
+    detecting a specified effect with a statistical test. More observations also
+    cannot correct biased sampling or make related measurements independent.
     """)
 
 
@@ -1771,19 +1839,32 @@ def _(mo):
 
     ## 5. Confidence intervals for a mean
 
-    When the population standard deviation $\sigma$ is known, a central normal
-    probability statement can be rearranged to give
+    A **confidence interval** gives a range around an estimate to express sampling
+    uncertainty. For a mean, we calculate **estimate ± multiplier × standard
+    error**. The multiplier, also called a **critical value**, sets the confidence
+    level. The next section explains what that level means across repeated studies.
+
+    With independent normal observations and known population SD $\sigma$, use
+    a multiplier from the standard normal distribution:
 
     $$\bar x\pm z_{1-\alpha/2}\frac{\sigma}{\sqrt n}.$$
 
-    In practice $\sigma$ is usually unknown. Replacing it with the sample standard
-    deviation $s$ adds uncertainty, so the critical value comes from a t-distribution
-    with $n-1$ degrees of freedom:
+    Here $\bar x$ is the observed sample mean. For 95% confidence, $\alpha=0.05$;
+    the subscript $1-\alpha/2=0.975$ selects a cutoff with 2.5% of the normal
+    distribution above it. This gives $z\approx1.96$.
+
+    Usually we estimate the SD from the same sample. Using the sample SD $s$ adds
+    uncertainty, so we use a larger multiplier from the **t-distribution**:
 
     $$\bar x\pm t_{n-1,\,1-\alpha/2}\frac{s}{\sqrt n}.$$
 
-    Higher confidence requires a wider interval; larger independent samples narrow
-    it. Changing the observed mean moves the interval without changing its width.
+    Both formulas have the stated coverage for independent normal observations
+    under their respective SD assumptions. For other populations, they are
+    approximations that may be poor with small samples or strong asymmetry.
+
+    At fixed sample size and SD, higher confidence requires a wider interval.
+    At fixed SD and confidence level, larger independent samples narrow it.
+    Changing only the observed mean moves the interval without changing its width.
     """)
 
 
@@ -1799,11 +1880,15 @@ def _(mo):
 
     The numerator varies because the sample mean varies, and the denominator now
     varies as well. In some samples, $S$ underestimates $\sigma$, making the absolute
-    t statistic unusually large. The t-distribution therefore assigns more
-    probability to its tails than the standard normal distribution.
+    t statistic unusually large. Under normal sampling, the t-distribution
+    describes this extra variation.
+    It has **heavier tails**: values far from zero are more likely than under
+    the standard normal distribution.
 
-    A t-distribution is indexed by its **degrees of freedom**. For a one-sample mean,
-    $df=n-1$. Small $df$ means that $S$ is estimated imprecisely, so the tails are
+    **Degrees of freedom** count how many deviations from the sample mean can
+    vary freely. The $n$ deviations must sum to zero, so knowing $n-1$ of them
+    determines the last. Thus $df=n-1$; no observation is discarded.
+    Small $df$ means that $S$ is estimated imprecisely, so the tails are
     especially heavy. As $df$ increases, $S$ becomes more stable and the
     t-distribution approaches the standard normal distribution.
     """)
@@ -2090,7 +2175,8 @@ def _(mo):
     known_sd_derivation = mo.md(r"""
     ### Derivation: from probability to an interval
 
-    Start with a central probability statement for the standardized sample mean:
+    For independent normal observations with known population SD, start with the
+    probability that the sample mean lies within $z^*$ standard errors of $\mu$:
 
     $$P\left(-z^*\leq\frac{\bar X-\mu}{\sigma/\sqrt n}\leq z^*\right)=1-\alpha.$$
 
@@ -2111,15 +2197,20 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 6. Confidence-interval coverage
+    ## 6. How often do confidence intervals include the true mean?
 
-    A 95% frequentist confidence interval is generated by a procedure with 95%
-    long-run coverage under its assumptions. Across repeated samples, approximately
-    95% of the resulting intervals contain the fixed population mean.
+    Imagine repeating a study with new independent cultures each time and making
+    a 95% confidence interval for mean enzyme activity. If the method's assumptions
+    hold, about 95% of the intervals would include the true population mean over
+    many repetitions. This proportion is called **coverage**. This repeated-study
+    interpretation is what **frequentist** confidence means.
 
-    Once one particular interval has been calculated, the parameter is not random:
-    that interval either contains it or it does not. A 95% probability statement
-    about the parameter requires a Bayesian model, introduced in Chapter 6.
+    In a real study we usually have just one interval and do not know whether it
+    includes the true mean. The 95% describes the method's success rate; it does
+    not mean that 95% of individual enzyme activities lie in the interval, nor
+    does it assign a 95% probability to the true mean being in this particular
+    interval. A probability statement about the unknown mean uses a different
+    approach, Bayesian inference, introduced in Chapter 6.
     """)
 
 
@@ -2143,8 +2234,9 @@ def _(mo):
     **Try this:** use a normal population, $n=10$, and 95% confidence, then click
     **Run a new simulation** several times. Each horizontal interval comes from
     a separate sample; the vertical reference marks the fixed true mean. Count
-    a few misses, then compare the overall coverage with 95% and its Monte Carlo
-    uncertainty. Only a subset of intervals is drawn, but the coverage tile uses
+    a few misses, then compare the overall coverage with 95%. The displayed
+    Monte Carlo uncertainty describes variation due to the finite number of
+    simulated studies. Only a subset of intervals is drawn, but the coverage tile uses
     every repetition. Switch to a right-skewed population with $n=2$, run again,
     then increase $n$ to 50 to explore how model approximation affects coverage.
     All settings, including interval method, apply on the next button click.
@@ -2307,7 +2399,7 @@ def _(
             and achieved {100 * coverage_rate:.1f}% in
             {coverage_result["repetitions"]:,} repetitions
             ({100 * coverage_gap:+.1f} percentage points). Red intervals miss the
-            fixed mean. With small, strongly non-normal samples, nominal and actual
+            fixed mean. With small, strongly non-normal samples, requested and actual
             coverage can differ because the interval model is only approximate.
             """
         ),
@@ -2340,21 +2432,35 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 7. Bootstrapping
+    ## 7. Bootstrapping: resampling the observations we have
 
-    In this laboratory, the observed sample is the original artificial height dataset
-    used in the course. Bootstrapping treats those recorded heights as an empirical
-    stand-in for the unknown population. Each bootstrap sample contains $n$ draws
-    **with replacement** from the original $n$ height observations. Repeated values
-    and omitted observations are therefore expected.
+    We rarely have the resources to repeat an experiment thousands of times.
+    **Bootstrapping** approximates variation between samples by repeatedly drawing
+    from the observations we already have. Here we use the course's artificial
+    height dataset as a stand-in for the unknown population.
 
-    For bootstrap statistics $T_1^*,\ldots,T_B^*$, a simple percentile interval is
+    Each bootstrap sample contains $n$ draws from the original $n$ observations
+    **with replacement**: after selecting a record, it remains available to be
+    selected again. Some records appear several times and others are omitted.
+    Calculate the chosen statistic for every resample. The SD of these results
+    estimates its standard error.
+
+    A **percentile interval** uses cutoffs in the resampled results. For a 95%
+    interval, take the 2.5th and 97.5th percentiles, leaving 2.5% on each side.
+    Written generally, for $B$ resampled statistics $T_1^*,\ldots,T_B^*$:
 
     $$\left[Q_{\alpha/2}(T^*),\;Q_{1-\alpha/2}(T^*)\right].$$
 
-    The method can estimate uncertainty for statistics whose analytic standard errors
-    are awkward, but it cannot make a convenience sample representative or restore a
-    dependence structure ignored by the resampling scheme.
+    $Q_p$ is the cutoff with fraction $p$ of the results at or below it, and
+    $1-\alpha$ is the requested confidence level. Actual coverage is approximate;
+    small or unrepresentative samples can give misleading intervals.
+
+    This version assumes independent observations from the same population.
+    Resampling individual assay readings from shared cultures would ignore their
+    dependence; resampling must respect the independent biological units.
+    Bootstrapping cannot recover parts of a population missing from the sample.
+    It is useful when a direct SE formula is difficult, for example for a median
+    or the **interquartile range (IQR)**, the width of the middle 50% of values.
     """)
 
 
@@ -2365,7 +2471,7 @@ def _(mo):
     highlights observations omitted or repeated in one resample; each resample
     still contains the original number of rows. The histogram collects the
     statistic over all resamples. Change **Confidence level** from 95% to 99%:
-    both the percentile interval and the mean's analytic t interval widen, using
+    both the percentile interval and the mean's formula-based t interval widen, using
     the same observed sample and the same bootstrap draws. Confidence updates
     immediately; statistic and repetition settings apply only when you click
     the button. Run again at the same settings, then compare
@@ -2556,7 +2662,7 @@ def _(
             bootstrap_t_interval[0],
             color=COLORS["purple"],
             linewidth=1.5,
-            label=f"{bootstrap_level:.0%} analytic t interval limits",
+            label=f"{bootstrap_level:.0%} formula-based t interval limits",
         )
         bootstrap_axis.axvline(
             bootstrap_t_interval[1],
@@ -2600,17 +2706,17 @@ def _(
         kind="info",
     )
     bootstrap_comparison = mo.md(
-        "The analytic t interval is shown only for the mean; it does not estimate "
+        "The formula-based t interval is shown only for the mean; it does not estimate "
         "uncertainty in the median, SD, or IQR."
     )
     if bootstrap_t_interval is not None:
         bootstrap_comparison = mo.md(
-            f"**{bootstrap_level:.0%} analytic t interval for the mean: "
+            f"**{bootstrap_level:.0%} formula-based t interval for the mean: "
             f"{bootstrap_t_interval[0]:.2f} to {bootstrap_t_interval[1]:.2f} cm.** "
             "Both intervals use the same original sample. The t interval uses "
             "the sample mean ± a t critical value × s/√n; it is exact for "
             "independent normal observations and approximate otherwise. The "
-            "percentile interval uses empirical resampling quantiles and can "
+            "percentile interval uses percentile cutoffs from the resampled results and can "
             "be asymmetric. They often agree when the mean's sampling distribution "
             "is nearly normal; skewness, bias, small samples, and finite bootstrap "
             "repetitions can cause differences. Neither method is universally "
@@ -2643,8 +2749,16 @@ def _(mo):
 
     ## 8. Propagating uncertainty
 
-    Error propagation describes uncertainty in a derived quantity; it is not an error
-    in the arithmetic. For $z=f(x,y)$, a first-order Taylor approximation gives
+    A calculated result inherits uncertainty from its inputs. For example,
+    uncertainty in a measured concentration carries through to a calculated amount
+    of substance. This is called **uncertainty propagation** (or error propagation);
+    “error” here does not mean a mistake in the arithmetic.
+
+    If $z=f(x,y)$, the symbols $s_x$ and $s_y$ below describe the input uncertainties
+    as standard deviations (or standard errors when the inputs are estimates).
+    The derivatives $\partial f/\partial x$ and $\partial f/\partial y$ measure how
+    strongly the result responds to a small change in each input. Using these
+    local slopes is called a **first-order Taylor approximation**:
 
     $$s_z^2\approx
       \left(\frac{\partial f}{\partial x}\right)^2s_x^2+
@@ -2652,9 +2766,16 @@ def _(mo):
       2\frac{\partial f}{\partial x}\frac{\partial f}{\partial y}
       \operatorname{Cov}(x,y).$$
 
-    The covariance term vanishes only when the inputs are independent. The
-    approximation is most reliable when uncertainties are small enough for the
-    transformation to look nearly linear over the plausible input range.
+    **Covariance** describes whether the inputs tend to deviate together. Positive
+    covariance means both tend to be high or low together; negative covariance
+    means one tends to be high when the other is low. For example, a shared
+    calibration error can move two measurements in the same direction.
+    Independent inputs have zero covariance, but zero covariance alone does not
+    prove independence. **Correlation** expresses covariance on a scale from
+    $-1$ to $1$ by dividing it by the two input SDs.
+
+    The approximation works best when the calculation is nearly a straight line
+    over the likely input range. Strong curvature can make it inaccurate.
     """)
 
 
@@ -2666,7 +2787,7 @@ def _(mo):
     Begin with a simulated sampling distribution $X\sim N(10,1)$: its estimates have
     mean $\mu_X=10$ and standard error $s_X=1$. We apply a transformation $Z=f(X)$ to
     every possible estimate. The first-order Taylor approximation replaces the curve
-    by its tangent at $\mu_X$ and predicts
+    by a straight line with the same slope at $\mu_X$ and predicts
 
     $$\mu_Z\approx f(\mu_X),\qquad
       s_Z\approx \left|f'(\mu_X)\right|s_X.$$
@@ -2878,8 +2999,15 @@ def _(mo):
     mo.md(r"""
     ### Worked example: isothermal titration calorimetry
 
-    At $T=278.15$ K, the lecture reports $\Delta H=52.70\pm0.14$ kJ/mol and
-    $K_a=851000\pm19500$ L/mol. We calculate
+    **Isothermal titration calorimetry (ITC)** measures heat released or absorbed
+    during binding at a fixed temperature. Here $\Delta H$ is the enthalpy change,
+    $K_a$ the association constant, and $K_d$ its reciprocal, the dissociation
+    constant. $\Delta G$ is the Gibbs free-energy change, $\Delta S$ the entropy
+    change, $T$ the absolute temperature, and $R$ the gas constant.
+
+    At $T=278.15$ K, the example uses $\Delta H=52.70\pm0.14$ kJ/mol and
+    $K_a=851000\pm19500$ L/mol. For this simulation, we treat the values after
+    $\pm$ as one standard error, not as confidence-interval limits. We calculate
 
     $$K_d=K_a^{-1},\qquad \Delta G=-RT\ln K_a,\qquad
       T\Delta S=\Delta H-\Delta G.$$
@@ -2889,8 +3017,10 @@ def _(mo):
     for $\Delta H$ and $K_a$, then recalculates $K_d$, $\Delta G$, and $T\Delta S$.
     The resulting histograms show the distributions of those derived quantities, and
     their standard deviations are reported as **MC SD**. More precisely, the simulation
-    draws two correlated normal latent errors: $\Delta H$ is normal, whereas $K_a$ is
-    made lognormal so that an association constant cannot become negative.
+    starts from two correlated normal random values: $\Delta H$ is normal, whereas
+    $K_a$ is **lognormal**, meaning its logarithm is normal. This keeps $K_a$
+    positive. The correlation control sets the correlation between $\Delta H$
+    and $\ln K_a$; the resulting correlation with $K_a$ itself can differ slightly.
 
     To make the effect of correlation visible, the displayed **Taylor SE** uses the
     independent-input rule and deliberately omits the covariance term. It therefore
@@ -2899,7 +3029,7 @@ def _(mo):
 
     **Try this:** keep the uncertainty multiplier at 1 and compare correlations
     of −0.9, 0, and 0.9. Watch the uncertainty of $T\Delta S$, which depends on
-    both inputs. The marginal uncertainties of $K_d$ and $\Delta G$ should remain
+    both inputs. The uncertainties of $K_d$ and $\Delta G$ considered separately should remain
     similar apart from simulation variation because they depend only on $K_a$.
     Restore correlation to 0 and increase the multiplier to 10 to amplify
     nonlinearity. Compare each MC SD with the independent-input Taylor SE; any
@@ -2926,7 +3056,7 @@ def _(mo):
         value=0.0,
         show_value=True,
         full_width=True,
-        label="Correlation between ΔH and Ka",
+        label="Correlation between ΔH and ln Ka",
     )
     return itc_correlation, itc_uncertainty_multiplier
 
@@ -3124,8 +3254,10 @@ def _(mo):
     propagation_derivation = mo.md(r"""
     ### Derivation: familiar rules from the general formula
 
-    For independent inputs, the covariance term is zero. Substituting the relevant
-    derivatives gives:
+    For independent inputs, covariance is zero. With $k$ an exact constant, the
+    slope-based formula gives the rules below. The rules for scaling, addition,
+    and subtraction are exact; those for multiplication and division are
+    first-order approximations:
 
     $$z=kx:\quad s_z^2=k^2s_x^2,$$
     $$z=x\pm y:\quad s_z^2=s_x^2+s_y^2,$$
@@ -3253,7 +3385,7 @@ def _(mo):
         {
             "The raw population becomes normal": "population_normal",
             "Every individual sample becomes symmetric": "sample_normal",
-            "The standardized sample mean has a sampling distribution approaching N(0, 1)": "sampling_normal",
+            "The distribution of sample means, expressed in SE units around the true mean": "sampling_normal",
             "The sample standard deviation becomes zero": "sd_zero",
         },
         value=None,
@@ -3263,8 +3395,8 @@ def _(mo):
         [
             mo.md(
                 "### 3. Central Limit Theorem\n\nWhat tends to become approximately "
-                "normal as sample size increases for independent, identically "
-                "distributed observations with finite, nonzero variance?"
+                "normal as sample size increases for independent observations "
+                "from the same population with finite, nonzero variance?"
             ),
             review_question_3,
         ]
@@ -3302,7 +3434,7 @@ def _(review_feedback, review_question_3):
 def _(mo):
     review_question_4 = mo.ui.radio(
         {
-            "There is a 95% posterior probability that μ is inside": "posterior",
+            "There is a 95% probability that the true mean μ is in this particular interval": "posterior",
             "95% of future observations must lie inside": "future",
             "The procedure captures μ in 95% of repeated samples": "coverage",
             "The interval is guaranteed to contain μ": "guarantee",
@@ -3333,7 +3465,8 @@ def _(review_feedback, review_question_4):
         ),
         incorrect_text=(
             {
-                "posterior": "A posterior probability needs a Bayesian model and prior. Frequentist 95% coverage "
+                "posterior": "Assigning a probability to the unknown mean requires a Bayesian model, including "
+                "a prior (a description of uncertainty before these data). Frequentist 95% coverage "
                 "refers to intervals varying across repeated samples while the population mean stays "
                 "fixed.",
                 "future": "A confidence interval targets the population mean, not the spread of new observations. "
@@ -3364,7 +3497,7 @@ def _(mo):
             mo.md(
                 "### 5. Bootstrap resampling\n\nYou observed 20 independent units "
                 "and want to estimate the SE of their sample mean with an ordinary "
-                "nonparametric bootstrap. How should each resample be drawn?"
+                "bootstrap that draws directly from the observed records. How should each resample be drawn?"
             ),
             review_question_5,
         ]
@@ -3388,7 +3521,7 @@ def _(review_feedback, review_question_5):
                 "without_replacement": "Drawing all 20 records without replacement would only reorder the "
                 "original sample. Replacement is what lets the bootstrap generate "
                 "different samples and hence a distribution of the statistic.",
-                "larger": "The ordinary nonparametric bootstrap uses the original sample size, here 20. Drawing "
+                "larger": "The ordinary bootstrap used here uses the original sample size, here 20. Drawing "
                 "more records in each resample changes the sampling problem and usually makes the "
                 "resulting spread too small for the original estimator.",
                 "repairs": "The bootstrap resamples the observed records; it has no information about "
@@ -3406,7 +3539,7 @@ def _(mo):
             "Positive covariance increases the variance of both": "both_increase",
             "It increases the variance of X + Y and decreases that of X − Y": "opposite",
             "Covariance changes the means, but not the variances": "means_only",
-            "It can be ignored whenever both marginal distributions are normal": "normal",
+            "It can be ignored whenever X and Y each have a normal distribution": "normal",
         },
         value=None,
         label="Choose one answer",
@@ -3433,7 +3566,7 @@ def _(review_feedback, review_question_6):
         incorrect_text={
             "both_increase": "The covariance term changes sign for a difference. When X and Y move together, their sum fluctuates more, but subtracting Y partly cancels their shared fluctuation.",
             "means_only": "Linearity gives E(X ± Y) = E(X) ± E(Y), regardless of covariance. Covariance enters the variance through the cross term, so it affects uncertainty even when the means are unchanged.",
-            "normal": "Normal marginal distributions do not imply independence or zero covariance. Correlated normal variables still require the covariance term when calculating the variance of a sum or difference.",
+            "normal": "X and Y can each follow a normal distribution without being independent or having zero covariance. Correlated normal variables still require the covariance term when calculating the variance of a sum or difference.",
         },
     )
 
@@ -3521,26 +3654,32 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 10. Summary and bridge
+    ## 10. Key points and next chapter
 
-    - Inference begins with a defensible link between the **sample** and the target
-      **population**; precision does not correct selection bias or pseudoreplication.
-    - PMFs describe discrete probabilities, densities require areas, and CDF
-      differences translate intervals into probabilities.
-    - An estimator varies across samples. Its sampling distribution determines its
-      standard error; for an independent sample mean, the SE scales as $1/\sqrt n$.
-    - The Central Limit Theorem concerns the sampling distribution of the mean, not
-      the shape of the raw observations.
-    - A frequentist confidence level is a long-run coverage property. The
-      t-distribution accounts for uncertainty introduced by estimating $\sigma$.
-    - Bootstrap distributions approximate estimator uncertainty using resampling
-      with replacement, but inherit limitations of the observed sample and design.
-    - First-order uncertainty propagation uses local derivatives and very often assumes independence.
-    - Monte Carlo simulation reveals when nonlinearity and covariance makes that approximation inadequate.
+    - Start with the biological question: which population do you want to learn
+      about, and which independent units did you sample? More measurements cannot
+      repair biased sampling or turn technical repeats into biological replicates.
+    - For counts, graph heights give probabilities of individual values. For
+      continuous measurements, probabilities are areas under a density curve.
+      A CDF gives the probability at or below a chosen value.
+    - **SD** describes variation among observations; **SE** describes variation
+      among estimates across repeated samples. For the mean, four times as many
+      independent observations halves the SE.
+    - The **Central Limit Theorem** explains why averages can be approximately
+      normal even when individual measurements are not.
+    - A **95% confidence method** includes the true value in about 95% of repeated
+      studies when its assumptions hold. The t method allows for estimating the
+      population SD from the sample.
+    - **Bootstrapping** resamples existing observations with replacement to
+      estimate sampling uncertainty. It adds no new biological information.
+    - **Uncertainty propagation** tracks how uncertain inputs affect a calculated
+      result. A slope-based approximation works well for small uncertainties;
+      simulation helps reveal the effects of curvature and correlated inputs.
 
-    **Next:** Chapter 3 studies relationships between two variables. Correlation and
-    regression will add new estimands, sampling distributions, confidence intervals,
-    and residual assumptions to the framework developed here.
+    **Next:** Chapter 3 explores relationships between two variables using
+    correlation and regression. We will ask how strongly measurements vary
+    together, how to describe that relationship, and how uncertain our conclusions
+    are.
     """)
 
 
