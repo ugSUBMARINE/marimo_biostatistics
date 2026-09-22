@@ -267,23 +267,26 @@ def _(np, stats):
 @app.cell
 def _(mo):
     mo.md(r"""
-    Null-hypothesis significance testing asks how compatible an observed statistic is
-    with a specified **null model**. It does not assign probabilities to hypotheses,
-    and it cannot replace careful design, effect estimates, or uncertainty intervals.
+    Does a treatment change enzyme activity, or could the observed difference be
+    consistent with ordinary variation between samples? **Null-hypothesis
+    significance testing (NHST)** helps us assess this question. We start with a
+    specific claim, often “no change”, and ask how unusual our result would be if
+    that claim and the test's assumptions were correct.
 
     By the end of the chapter, you should be able to:
 
-    1. define a null hypothesis, test statistic, and p-value in conditional language;
-    2. distinguish one-sided from two-sided alternatives;
-    3. calculate and interpret one-sample z and t statistics;
-    4. connect a matched hypothesis test with its confidence interval;
-    5. distinguish type-I error, type-II error, power, and diagnostic accuracy;
-    6. recognize common p-value misconceptions and data-dependent analysis choices.
+    1. explain a null hypothesis, test statistic, and p-value in your own words;
+    2. choose a test for a change in one direction or in either direction;
+    3. use z and t tests to compare a sample mean with a reference value;
+    4. explain how a confidence interval relates to a test result;
+    5. distinguish false alarms, missed effects, and the ability to detect an effect;
+    6. recognize misleading interpretations of p-values and problems caused by
+       choosing analyses after seeing the results.
 
-    > **Two-minute preview:** A p-value is a tail probability calculated under
-    > $H_0$. A decision threshold controls a long-run error rate, while power depends
-    > on the true effect, variation, sample size, threshold, and alternative. Report
-    > the estimated effect and its uncertainty alongside any test result.
+    > **Keep the biological question in view:** A test result alone cannot tell
+    > you whether an effect is large enough to matter. Report the estimated change
+    > in meaningful units, such as enzyme activity or growth rate, together with a
+    > confidence interval showing its uncertainty.
 
     **Prerequisites:** probability distributions, sampling distributions, standard
     errors, t-distributions, and confidence intervals from Chapter 2.
@@ -297,13 +300,31 @@ def _(mo):
 
     ## 1. Null models and exact p-values
 
-    A hypothesis test begins by specifying what random variation would look like if a
-    particular null hypothesis were true. The **test statistic** compresses the data
-    into a value whose null distribution can be calculated or simulated.
+    The **null hypothesis**, written $H_0$ (“H zero”), is the specific claim we
+    test. For example, it might say that mean enzyme activity equals a reference
+    value. The **alternative hypothesis**, $H_1$, describes the change we are
+    looking for, such as higher activity or a difference in either direction.
 
-    For a fair coin, $H_0:p=0.5$ makes the number of heads in $n$ independent tosses a
-    binomial random variable. For the directional alternative $H_1:p>0.5$, outcomes
-    at least as extreme as 13 heads are 13, 14, ..., 20 heads.
+    The null hypothesis together with assumptions about how measurements vary
+    forms the **null model**. A **test statistic** is a number calculated from the
+    data, such as a count or a mean difference. Its **null distribution** describes
+    the values we would expect across repeated studies if the null model were true.
+
+    We begin with coin tosses because their probabilities are easy to calculate.
+    For a fair coin, $H_0:p=0.5$, where $p$ is the probability of heads on each toss.
+    If the tosses are **independent**, knowing one outcome tells us nothing about
+    the others. The number of heads in $n$ independent tosses follows a
+    **binomial distribution**, which gives the probability of each possible count.
+    The same model can describe the number of positive cultures in independent
+    trials with the same probability of a positive result.
+
+    A **p-value** is the probability, assuming the null model is true, of obtaining
+    the observed test statistic or a result more extreme in the direction(s) being
+    tested. For $H_1:p>0.5$, “more extreme” means more heads. With 13 heads in 20
+    tosses, we therefore add the probabilities of 13, 14, ..., 20 heads. The sum is
+    about 0.132. **Exact** means we calculate directly from the binomial model
+    without a large-sample approximation; the model assumptions still matter.
+    Here, $p$ in $H_0:p=0.5$ is the heads probability, not the p-value of the test.
 
     **Try this:** keep $n=20$ and $p_0=0.5$, choose **More heads**, and move the
     observed count from 10 to 13 to 18. Follow the highlighted outcomes and their
@@ -440,12 +461,13 @@ def _(
         ]
     )
     coin_note_text = (
-        "The orange bars are the outcomes included in the exact tail probability. "
+        "The orange bars mark the observed count and all counts further in the tested direction. "
         "Their probabilities sum to the p-value."
         if coin_direction != "two-sided"
-        else "SciPy's exact two-sided binomial test includes outcomes whose null "
-        "probability is no greater than that of the observed outcome. Because the "
-        "distribution is discrete, this is not generally twice a one-sided p-value."
+        else "For this two-sided binomial test, the orange bars mark counts that are "
+        "no more likely than the observed count under the null model. Their "
+        "probabilities sum to the p-value. Counts are whole numbers, so the "
+        "p-value changes in steps and need not equal twice a one-sided p-value."
     )
     coin_note = mo.callout(mo.md(coin_note_text), kind="info")
     two_column_panel(
@@ -469,7 +491,7 @@ def _(mo):
     mo.vstack(
         [
             mo.md(
-                "### Checkpoint: which sentence keeps the conditioning in the correct direction?"
+                "### Checkpoint: what does the p-value assume, and what does it tell us?"
             ),
             conditional_checkpoint,
         ]
@@ -482,10 +504,10 @@ def _(conditional_checkpoint, review_feedback):
     conditional_feedback = review_feedback(
         conditional_checkpoint.value,
         correct_value="conditional",
-        correct_text="**Correct.** Under independent fair-coin tosses, K is binomial with n = 20 and p = 0.5. The upper-tail probability P(K ≥ 13) ≈ 0.132 includes the observed 13 heads and all larger counts; it is not just P(K = 13).",
+        correct_text="**Correct.** If we repeated sets of 20 independent fair-coin tosses, about 13.2% would produce 13 or more heads. We include the observed count and all higher counts, not just exactly 13 heads.",
         incorrect_text={
-            "reversed": "This reverses the conditioning. We assumed a fair coin to calculate P(K ≥ 13); a probability that the coin is fair after seeing the tosses would require a prior and a model of the alternatives.",
-            "chance": "The null model already describes random tosses. The 13.2% is a probability of an upper-tail outcome under that model, not a probability that randomness was the cause of the result.",
+            "reversed": "The calculation starts by assuming the coin is fair and asks how often 13 or more heads would occur. It does not calculate the probability that the coin is fair after seeing the tosses.",
+            "chance": "The 13.2% describes how often a fair coin would give 13 or more heads in 20 independent tosses. It does not give the probability that chance caused this particular result.",
         },
     )
     conditional_feedback  # noqa: B018
@@ -498,14 +520,29 @@ def _(mo):
 
     ## 2. One-sided and two-sided tails
 
-    "More extreme" is defined by the test statistic and the alternative hypothesis.
-    A lower-tailed alternative asks about unusually small values, an upper-tailed
-    alternative about unusually large values, and a two-sided alternative about
-    deviations in either direction. The direction must be chosen from the scientific
-    question before inspecting the result.
+    A **tail** is an end of a distribution, where unusually low or high values lie.
+    A **one-sided test** asks about a change in one chosen direction: a lower-tailed
+    test looks for a decrease, and an upper-tailed test looks for an increase.
+    A **two-sided test** looks for either. Choose the direction from the biological
+    question before inspecting the data. If either increased or decreased enzyme
+    activity would answer your question, use a two-sided test even if you expect
+    a decrease.
 
-    The density plot shows area in the relevant tail or tails. The linked CDF reports
-    accumulated probability up to the observed statistic.
+    In the left-hand **density plot**, probability is represented by area under the
+    curve, not its height at a single point. The shaded tail area is the p-value.
+    The right-hand **cumulative distribution function (CDF)** gives the probability
+    of a value at or below a chosen point. We write this as $F(x)$: for example,
+    $F(2)$ is the area to the left of 2, and $1-F(2)$ is the area to its right.
+
+    Start with the **standard normal distribution**, a bell-shaped curve with mean
+    zero and standard deviation one. The **t-distribution** has heavier tails:
+    values far from zero are more likely. Its shape depends on **degrees of
+    freedom (df)**, a measure of how much independent information remains for
+    estimating variation. For the one-sample t test below, $df=n-1$. Larger df
+    make the t curve closer to the normal curve. The explorer also includes
+    chi-squared ($\chi^2$) and F distributions used in later tests; these are
+    asymmetric, meaning their two sides have different shapes. The F distribution
+    has two df settings, one for each variation estimate being compared.
 
     **Try this:** use the standard normal model and statistic 2.0. Compare
     **Upper tail**, **Lower tail**, and **Two-sided**; match the shaded area to
@@ -515,7 +552,7 @@ def _(mo):
     degrees-of-freedom control affects t, chi-squared, and F models; the second
     affects F only, and neither affects the standard normal. Switching models
     resets the statistic and tail controls to suitable defaults. Changes update
-    immediately, and the displayed tail convention defines what is being shaded.
+    immediately; the selected tail determines which area is shaded.
     """)
 
 
@@ -741,14 +778,14 @@ def _(
     tail_asymmetry_note = (
         mo.callout(
             mo.md(
-                "For this asymmetric distribution the explorer presents directional tails only. A two-sided test requires a test-specific definition of extremeness; simply doubling the smaller tail is not universal."
+                "This curve has different shapes on its two sides, so the explorer shows one tail at a time. Whether small values, large values, or both count against the null depends on the particular test. Doubling the smaller tail area is not a general rule for every test."
             ),
             kind="warn",
         )
         if tail_name in {"chi2", "f"}
         else mo.callout(
             mo.md(
-                "For these symmetric reference distributions, the displayed two-sided p-value includes equally distant values in both tails."
+                "These curves are symmetric around zero. The two-sided p-value adds the areas at least as far from zero as the observed statistic, on both sides."
             ),
             kind="info",
         )
@@ -776,7 +813,7 @@ def _(mo):
             mo.md(r"""
             ### Checkpoint: choose the alternatives
 
-            Define each contrast as intervention minus reference, and decide the
+            Calculate each difference as intervention minus reference, and decide the
             scientific question before examining outcomes.
 
             1. Does a treatment **reduce** mean blood pressure?
@@ -794,9 +831,9 @@ def _(review_feedback, scenario_direction):
     scenario_result = review_feedback(
         scenario_direction.value,
         correct_value="correct",
-        correct_text="**Correct.** For intervention minus reference, reductions in blood pressure and enzyme activity correspond to negative contrasts and lower-tailed alternatives. A growth-rate change in either direction requires a two-sided alternative. Reversing the contrast would reverse the one-sided directions.",
+        correct_text="**Correct.** For intervention minus reference, reductions in blood pressure and enzyme activity correspond to negative differences and lower-tailed alternatives. A growth-rate change in either direction requires a two-sided alternative. Reversing the subtraction would reverse the one-sided directions.",
         incorrect_text={
-            "wrong_1": "The blood-pressure and growth-rate directions are right. For mutation minus reference, decreased enzyme activity gives a negative contrast, so the second alternative must also be lower-tailed, not greater-tailed.",
+            "wrong_1": "The blood-pressure and growth-rate directions are right. For mutation minus reference, decreased enzyme activity gives a negative difference, so the second alternative must also be lower-tailed, not greater-tailed.",
             "wrong_2": "The enzyme-activity direction is right. The first question asks specifically for a reduction, so its alternative is lower-tailed; the third includes both an increase and a decrease, so it must be two-sided rather than greater-tailed.",
         },
     )
@@ -810,29 +847,54 @@ def _(mo):
 
     ## 3. A testing workflow and one-sample mean tests
 
-    A defensible test is more than a formula. Its order matters:
+    Plan the test around the biological question:
 
-    1. define the biological target, sampling design, assumptions, and analysis;
-    2. state $H_0$, $H_1$, the test statistic, and the decision threshold $\alpha$;
-    3. collect the data and calculate the statistic;
-    4. identify its distribution under $H_0$ and calculate the p-value;
-    5. reject or fail to reject $H_0$ using the pre-specified rule;
-    6. report the effect estimate, uncertainty interval, test result, and limitations.
+    1. define what you want to measure, which population you want to learn about,
+       and how you will obtain independent observations;
+    2. state $H_0$ and $H_1$, choose a test suited to the measurements and design,
+       and set the decision threshold $\alpha$ (“alpha”);
+    3. collect the data, check the assumptions that can be assessed from them,
+       and calculate the test statistic and p-value;
+    4. compare the p-value with the planned threshold;
+    5. report the estimated effect, confidence interval, test result, and limitations.
 
-    Independence comes from the design, not from a normality test. Looking at the
-    result before choosing the alternative or threshold changes the procedure and its
-    long-run error properties.
+    The **significance level**, $\alpha$, is the threshold used to make the decision.
+    This notebook calls a result **statistically significant** when $p\leq\alpha$,
+    and we **reject $H_0$**. Otherwise, we **fail to reject $H_0$**: the data do not
+    provide enough evidence against it with this test. This does not establish that
+    $H_0$ is true. Section 5 explains how $\alpha$ relates to false alarms.
+
+    Independence depends on the experimental design. Three readings from the same
+    culture are **technical replicates**: they help assess measurement variation,
+    but do not replace three independently grown cultures (**biological replicates**).
+    A check for a bell-shaped distribution cannot establish independence. Choosing
+    the test direction or threshold after seeing the result can increase false alarms.
 
     ### Worked example: birth weight
 
-    Ten newborns have a mean birth weight of 2200 g, compared with a standard value
-    of 3000 g. If the population SD is known, standardize with $\sigma/\sqrt n$ and
-    use a z reference distribution. If it is estimated from the sample, standardize
-    with $s/\sqrt n$ and use a t distribution with $n-1$ degrees of freedom.
+    In this teaching example, ten newborns have a mean birth weight of 2200 g,
+    compared with a fixed reference of 3000 g. A **one-sample test** compares the
+    mean of one sample with such a reference. Let $\bar x$ be the observed sample
+    mean, $\mu$ (“mu”) the population mean we want to learn about, and $\mu_0$ the
+    value proposed by $H_0$. Here the estimated difference is $2200-3000=-800$ g.
+
+    **Standard deviation (SD)** describes variation between individual newborns.
+    **Standard error (SE)** describes how much the sample mean would vary across
+    repeated samples of the same size. For independent observations,
+    $SE=\mathrm{SD}/\sqrt n$, where $n$ is the number of observations.
+    The test statistic divides the mean difference by SE, expressing how far the
+    observed mean lies from the reference in standard-error units.
+
+    If the population SD, $\sigma$ (“sigma”), is known, use a **z test**. Usually
+    it is unknown and we estimate it using the sample SD, $s$, then use a **t test**.
+    Estimating SD adds uncertainty; the t-distribution accounts for this with its
+    heavier tails. It uses $n-1$ degrees of freedom: after estimating the sample
+    mean, only $n-1$ deviations from it can vary freely because they sum to zero.
+    For ten newborns, $df=9$.
 
     **Try this:** begin with the t test and move the observed mean towards the
-    null mean. The standardized discrepancy approaches zero and the two-sided
-    p-value grows. Restore the original means, then increase $n$ or decrease the
+    null mean. The difference in standard-error units approaches zero and the
+    two-sided p-value grows. Restore the original means, then increase $n$ or decrease the
     sample SD to see stronger evidence for the same mean difference. Compare
     z and t tests at the same SD: set the visible SD control, switch test type,
     then set the newly visible SD control to the same value. Each test retains
@@ -842,8 +904,8 @@ def _(mo):
 
     **Effect versus precision:** keep both means and the selected SD fixed, then
     compare $n=10$ with $n=40$. The raw difference and standardized effect stay
-    constant, while SE halves, the interval narrows, and (for a nonzero difference
-    in a two-sided test) the p-value falls. This is a controlled illustration,
+    constant, while the standard error halves and the interval narrows. For a
+    nonzero difference in a two-sided test, the p-value falls. This is a controlled illustration,
     not a sequence of newly sampled data.
 
     The standardized effect expresses the observed difference in **SD units**.
@@ -855,10 +917,12 @@ def _(mo):
     Neither a small p-value nor a large n makes the observed effect larger or
     establishes biological importance.
 
-    The displayed $(1-\alpha)$ interval estimates $\mu-\mu_0$ in grams, treating
+    The displayed confidence interval, with confidence level $1-\alpha$ (95% when
+    $\alpha=0.05$), estimates $\mu-\mu_0$ in grams, treating
     $\mu_0$ as fixed. It is two-sided for “Different mean”, a lower bound for
-    “Higher mean”, and an upper bound for “Lower mean”. One-sided intervals have
-    infinite total width.
+    “Higher mean”, and an upper bound for “Lower mean”. A one-sided interval
+    gives a limit in just one direction; the other end is unbounded, so its total
+    width is shown as infinite.
 
     **Connecting the interval to the test:** zero means no difference from the
     null mean. If the interval excludes zero, the p-value is below the selected
@@ -870,10 +934,12 @@ def _(mo):
     At the exact boundary, when an interval endpoint is zero, the p-value equals
     the threshold. This notebook counts equality as rejection.
 
-    Confidence describes long-run coverage, not a probability assigned to this
-    fixed population difference. Assume independent observations and a normal
-    population for exact small-sample z/t inference, or a suitable large-sample
-    approximation.
+    These calculations assume independent observations. With small samples, the
+    z and t tests used here require a normally distributed population for their
+    stated error rates to be exact. With larger samples they can be useful
+    approximations, but strong skew or extreme observations may still cause problems.
+    Here we treat 3000 g as a fixed reference; comparing with a mean estimated from
+    another sample would also require accounting for that sample's uncertainty.
     """)
 
 
@@ -1135,20 +1201,23 @@ def _(
 @app.cell
 def _(mo):
     test_statistic_derivation = mo.md(r"""
-    ### Derivation: standardized distance from the null value
+    ### Where the formulas come from: difference divided by uncertainty
 
     Under $H_0:\mu=\mu_0$, the sample mean has expected value $\mu_0$ and standard
     error $\sigma/\sqrt n$. Subtract the null value and divide by that standard error:
 
     $$Z=\frac{\bar X-\mu_0}{\sigma/\sqrt n}.$$
 
-    If the population SD is unknown, replace it with the sample estimate $S$:
+    Here $\bar X$ represents the sample mean. If the population SD is unknown,
+    replace it with the sample SD, $S$ (written $s$ for an observed sample):
 
     $$T=\frac{\bar X-\mu_0}{S/\sqrt n},\qquad df=n-1.$$
 
-    The t reference distribution has heavier tails because the denominator is now
-    estimated and varies across samples. In either case, the statistic is the observed
-    difference expressed in **standard-error units**.
+    When independent observations come from a normal population, $Z$ follows the
+    standard normal distribution and $T$ follows a t-distribution with $n-1$ degrees
+    of freedom. The t curve allows more values far from zero because the SD in the
+    denominator is itself estimated from the sample. Both statistics express the
+    observed difference in **standard-error units**.
     """)
     mo.accordion(
         {"Derivation — one-sample z and t statistics": test_statistic_derivation}
@@ -1162,12 +1231,23 @@ def _(mo):
 
     ## 4. Tests and confidence intervals
 
-    For a matching two-sided test and interval, rejecting at level $\alpha$ is
-    equivalent to the null value lying outside the $(1-\alpha)$ confidence interval.
-    The model, standard error, tail convention, and confidence level must match.
+    A **confidence interval** gives a range of population means compatible with
+    the data and model at the chosen confidence level. A narrower interval indicates
+    a more precise estimate. The 95% refers to the method: if we repeated the study
+    many times and calculated an interval each time, about 95% of those intervals
+    would contain the true population mean, provided the assumptions hold. It is
+    not a range containing 95% of individual newborns' weights, nor does it assign
+    a 95% probability to the true mean being inside this particular interval.
 
-    The interval communicates more than the binary decision: it shows the estimated
-    direction, precision, and effect sizes still compatible with the data.
+    For the same data and assumptions, a two-sided 95% t interval and a two-sided
+    t test at $\alpha=0.05$ answer related questions. A null mean strictly outside
+    the interval gives $p<0.05$; one strictly inside gives $p>0.05$. At an endpoint,
+    $p=0.05$, which this notebook counts as rejection. The confidence level, test
+    type, and choice of one or two sides must match for this connection to hold.
+
+    The interval also helps answer the biological question: does the range include
+    only changes large enough to matter, or both negligible and important changes?
+    This information is lost when we report only “significant” or “not significant”.
 
     **Try this:** at 95% confidence, slide the null mean across the interval and
     observe where the two-sided decision changes. The estimate, SD, and sample
@@ -1313,21 +1393,41 @@ def _(mo):
 
     ## 5. Type-I error, Type-II error, and power
 
-    A test is a repeated-decision procedure. If $H_0$ is true, rejecting it is a
-    **type-I error**; the procedure is designed so that this probability is $\alpha$
-    under its assumptions. If a particular alternative is true, failing to reject is
-    a **type-II error** with probability $\beta$. The probability of rejecting that
-    false null is the **power**, $1-\beta$.
+    Even a well-designed study can lead to an incorrect decision because samples
+    vary. There are two kinds of error:
 
-    Power is a design-stage property for a specified effect. It increases when the
-    scientifically meaningful effect is larger, variability is smaller, sample size
-    is larger, or the decision threshold is less stringent. It is not usefully
-    recalculated from the observed effect after an underpowered study.
+    - A **type-I error (false positive or false alarm)** occurs when we reject a
+      true null hypothesis. A test at $\alpha=0.05$ is designed to do this in at
+      most 5% of repeated studies when $H_0$ and the assumptions hold. Some tests,
+      including tests of whole-number counts, may have a lower false-alarm rate.
+    - A **type-II error (false negative or missed effect)** occurs when we fail to
+      reject $H_0$ even though a specified effect is present. Its probability is
+      $\beta$ (“beta”). **Power**, $1-\beta$, is the probability of detecting that
+      effect by rejecting $H_0$. For example, 80% power means about 80 of 100
+      repeated studies would detect that particular effect under the assumptions.
+
+    Neither rate tells us the probability that the conclusion of this one study
+    is wrong. Power depends on the true effect: a design may readily detect a large
+    change in enzyme activity but often miss a small change.
+
+    Use power when planning a study. Choose a change that would matter biologically
+    and a realistic SD, then work out the sample size needed. For an effect in the
+    tested direction, power increases with a larger effect, less variation, more
+    independent observations, or a higher $\alpha$. Raising $\alpha$ also allows
+    more false alarms. After collecting data, use the effect estimate and confidence
+    interval to assess what the study tells you; recalculating power from the
+    observed effect adds little information.
+
+    This explorer uses a **z test with known population SD** and independent,
+    normally distributed observations. Its sample-size result applies to that
+    simplified design. A study using a t test or a different design needs a
+    corresponding power calculation. For a one-sided test, the explorer places
+    the true change in the chosen direction.
 
     **Try this:** keep the effect and SD at their defaults and compare $n=10$
-    with $n=40$. Identify the rejection region under the null and the probability
-    mass of the alternative inside it: that latter area is power. Restore
-    $n=10$, halve the true change, and check the loss of power. Next raise the
+    with $n=40$. The **rejection region** contains the observed mean differences
+    that would produce a significant result. Under the curve for a real effect,
+    the area in that region is power. Restore $n=10$, halve the true change, and check the loss of power. Next raise the
     target-power control; it changes the sample-size recommendation, not the
     power of the currently selected $n$. Compare planned one- and two-sided
     alternatives, then lower $\alpha$ to see the trade-off between false
@@ -1588,21 +1688,34 @@ def _(mo):
 
     ## 6. Diagnostic-test analogy
 
-    A diagnostic threshold provides a useful analogy for statistical decisions. Let
-    $H_0$ represent a healthy person and $H_1$ a person with porphyria. A concentration
-    above the threshold is called positive.
+    A laboratory test can also make false-positive and false-negative decisions.
+    In this simplified illustration, a concentration above a chosen threshold is
+    called positive. We compare people without porphyria with people who have
+    porphyria, a disorder of haem production. The concentration distributions and
+    thresholds here are invented for teaching, not clinical reference values.
 
-    - false-positive rate $=\alpha$ and specificity $=1-\alpha$;
-    - false-negative rate $=\beta$ and sensitivity $=1-\beta$, analogous to power.
+    - **Sensitivity** is the fraction of people with the disease who test positive.
+      It is analogous to power, $1-\beta$. The remaining fraction, $\beta$, consists
+      of false negatives: people with the disease whose tests are negative.
+    - **Specificity** is the fraction of people without the disease who test
+      negative. It is analogous to $1-\alpha$. The remaining fraction, $\alpha$,
+      consists of false positives: people without the disease whose tests are positive.
 
-    The analogy has limits: disease status is not literally a statistical hypothesis.
-    Predictive values also depend on prevalence; those posterior probabilities are
-    reserved for Chapter 6.
+    The right-hand **ROC curve** (receiver operating characteristic curve) plots
+    sensitivity against the false-positive rate across thresholds. Each point
+    represents one threshold; the highlighted point matches the slider. The upper
+    left corner represents perfect detection with no false positives.
+
+    The analogy treats “no disease” like $H_0$ and “disease present” like $H_1$.
+    Sensitivity is not the probability that a person with a positive result has the
+    disease. That probability also depends on **prevalence**, the proportion of
+    people with the disease in the population being tested. Chapter 6 returns to
+    this distinction.
 
     **Try this:** move the positive-test threshold from 76 towards 40, then
-    towards 120 µmol/L. A lower threshold captures more sick people but also
-    labels more healthy people positive. Follow sensitivity and false-positive
-    rate on the distribution plot and the linked ROC point. Raising the
+    towards 120 µmol/L. A lower threshold detects more people with the disease but
+    also labels more people without the disease positive. Follow sensitivity and
+    false-positive rate on the distribution plot and the linked ROC point. Raising the
     threshold reverses the trade-off; it does not change either group's
     underlying concentration distribution. Decide which type of error would
     matter more for a proposed use before choosing a threshold.
@@ -1789,9 +1902,11 @@ def _(mo):
 
     A p-value is not the probability that $H_0$ is true, and $1-p$ is not the
     probability that $H_1$ is true. Failure to reject does not prove equality. A
-    small p-value does not establish a large, important, or unbiased effect.
+    small p-value does not establish a large or important effect, or rule out
+    systematic errors such as measuring all treated samples in one batch and all
+    controls in another.
     Nor does a p-value tell you the probability that 'chance caused' your result.
-    Instead, random chance is a built-in assumption of the null hypothesis, and the
+    Instead, the null model describes how observations would vary across samples. The
     p-value is the probability, under that null model, of a test statistic at
     least as extreme as the observed one in the direction(s) of the alternative.
 
@@ -1808,7 +1923,8 @@ def _(mo):
     **Try the misconception clinic:** choose the statement you think is valid
     and read its feedback, then inspect the corrections for the other claims.
     For each, identify whether it confuses probability of data with probability
-    of a hypothesis, uncertainty with equivalence, or evidence with importance.
+    of a hypothesis, an uncertain result with evidence of similar effects, or
+    statistical significance with biological importance.
     Selecting an answer immediately reveals its explanation.
     """)
 
@@ -1839,13 +1955,13 @@ def _(mo):
 def _(misconception_choice, review_feedback):
     misconception_corrections = {
         "hypothesis_probability": (
-            r"The conditional is reversed. A p-value describes data under $H_0$; it does not provide $P(H_0\mid\mathrm{data})$."
+            "A p-value starts by assuming the null model is true and asks about possible data. It does not calculate the probability that the null hypothesis is true after seeing the data."
         ),
         "alternative_probability": (
-            "Neither $p$ nor $1-p$ assigns a probability to a hypothesis. Bayesian posterior probabilities require an explicit prior and likelihood."
+            "Neither $p$ nor $1-p$ assigns a probability to a hypothesis. To calculate probabilities for hypotheses, we need a different approach that combines assumptions about their probabilities before the study with a model for the data (Chapter 6)."
         ),
         "equivalence": (
-            "Failure to reject can reflect imprecision or low power. Equivalence requires a scientifically meaningful margin and an analysis showing effects are small enough relative to that margin; p > 0.05 in a difference test is insufficient."
+            "The study may simply be too imprecise to detect a difference. To establish equivalence—effects similar enough for the biological purpose—define the largest difference you would consider negligible before the study, then use an analysis that tests whether the effect lies within those limits. A difference-test p-value above 0.05 is insufficient."
         ),
         "importance": (
             "A tiny effect can have a small p-value with a large, precise sample. Inspect the effect in measurement units, its interval, and the biological context to judge importance; statistical significance alone cannot do that."
@@ -1854,7 +1970,7 @@ def _(misconception_choice, review_feedback):
     misconception_feedback = review_feedback(
         misconception_choice.value,
         correct_value="valid",
-        correct_text="**Correct.** The null model and test assumptions define the reference distribution. The pre-specified alternative defines which statistics are at least as extreme as observed; the p-value is their total probability under that model.",
+        correct_text="**Correct.** Start by assuming the null model is true. The test and the direction chosen before the study determine which results count as at least as extreme as the observed one. The p-value adds up their probabilities under that model.",
         incorrect_text=misconception_corrections,
         unanswered_text="Select an interpretation above.",
     )
@@ -1897,8 +2013,8 @@ def _(mo):
 
     **Try this:** run **Test once at the end** with α = 0.05. About 5 in 100 studies
     should give a false alarm. Then select **Test several independent outcomes**,
-    set the maximum to 10, and rerun. About 40 in 100 studies will give at least one
-    false alarm. Try **Test repeatedly as data arrive** too: the checks share data,
+    set the number of tests to 10, and rerun. About 40 in 100 studies will give at
+    least one false alarm. Try **Test repeatedly as data arrive** too: the checks share data,
     so the increase is different from that for independent outcomes.
 
     **Reading the figures:** the first plot shows the fraction of studies with at
@@ -1907,7 +2023,12 @@ def _(mo):
     (approximate 95% intervals for each point). More simulated studies make these
     bars smaller; they do not remove the problem of false alarms from extra tests.
     The second plot shows the reported p-values: one per study, taking the smallest
-    if several tests were tried. The shaded area marks significant results.
+    if several tests were tried. The shaded area marks significant results. The
+    vertical axis is density: the area of a bar, rather than its height alone,
+    represents the fraction of studies
+    in that p-value range. With one planned test and no effect, p-values spread evenly
+    from 0 to 1 in this simulation; selecting the smallest of several shifts them
+    towards zero.
 
     Repeated checks start after at least five people, with at least one new person
     between checks. With 10 people, at most six checks are possible (at 5 through
@@ -2242,10 +2363,10 @@ def _(review_feedback, review_question_1):
     review_feedback(
         review_question_1.value,
         correct_value="conditional",
-        correct_text="**Correct.** The p-value conditions on the null model and describes the statistic or more extreme values.",
+        correct_text="**Correct.** If the null model were true, results at least this far from the null value, in either direction, would occur in 3% of repeated studies using this test.",
         incorrect_text={
-            "null_probability": "This reverses the conditioning. The calculation assumes H₀ to obtain a tail "
-            "probability for the test statistic; it does not calculate a posterior "
+            "null_probability": "The calculation assumes H₀ is true and obtains a "
+            "probability for the observed statistic or more extreme values; it does not calculate a "
             "probability that H₀ is true.",
             "chance": "“Chance caused the result” is not an event defined by this test. The value 0.03 is the "
             "probability of a statistic at least as extreme, in either tested direction, under H₀ "
@@ -2268,7 +2389,7 @@ def _(mo):
     mo.vstack(
         [
             mo.md(
-                "**2. Which situation justifies a pre-specified lower-tailed alternative?**"
+                "**2. Which research question calls for a lower-tailed test chosen before seeing the data?**"
             ),
             review_question_2,
         ]
@@ -2285,8 +2406,8 @@ def _(review_feedback, review_question_2):
         incorrect_text={
             "two_sided": "If increases and decreases both answer the scientific question, the alternative "
             "should include both directions. A lower-tailed test would not test for an increase.",
-            "posthoc": "Choosing the tail after seeing the observed sign changes the testing procedure and "
-            "can inflate false positives. Specify the scientific direction before examining "
+            "posthoc": "Choosing the direction after seeing whether the result increased or decreased "
+            "can increase false alarms. Specify the direction before examining "
             "outcomes.",
         },
     )
@@ -2358,13 +2479,13 @@ def _(review_feedback, review_question_4):
     review_feedback(
         review_question_4.value,
         correct_value="reject",
-        correct_text="**Correct.** With the same model, data, and standard error, a null mean strictly outside the closed 95% t interval gives p < 0.05. A value exactly at an endpoint gives p = 0.05, so the boundary convention should be stated separately.",
+        correct_text="**Correct.** Using the same data and assumptions, a null mean strictly outside the 95% t interval gives p < 0.05. At an endpoint, p = 0.05; this notebook counts equality as rejection.",
         incorrect_text={
             "fail": "Width describes precision, but the test decision depends on whether the interval "
             "includes the null value. A matching interval can be wide and still exclude that value, "
             "implying rejection.",
-            "unrelated": "The matching t interval is obtained by inverting the two-sided t test. A null value "
-            "strictly outside the closed 95% interval gives p < 0.05; at an endpoint p = 0.05.",
+            "unrelated": "The interval contains the null means for which the matching two-sided t test gives p ≥ 0.05. A value "
+            "strictly outside the 95% interval gives p < 0.05; at an endpoint p = 0.05.",
         },
     )
 
@@ -2375,7 +2496,7 @@ def _(mo):
         {
             "Sensitivity ↔ power; specificity ↔ 1 − α": "correct_map",
             "Sensitivity ↔ α; specificity ↔ β": "reversed",
-            "Sensitivity and specificity determine the posterior disease probability without prevalence": "posterior",
+            "Sensitivity and specificity alone tell us the probability of disease after a positive result": "posterior",
         },
         value=None,
         label="Choose one answer",
@@ -2383,7 +2504,7 @@ def _(mo):
     mo.vstack(
         [
             mo.md(
-                "**5. Which mapping correctly connects diagnostic testing with hypothesis-test errors?**"
+                "**5. Which statement correctly connects diagnostic testing with hypothesis-test errors?**"
             ),
             review_question_5,
         ]
@@ -2399,9 +2520,9 @@ def _(review_feedback, review_question_5):
         correct_text="**Correct.** Sensitivity is the probability of detection when disease is present, analogous to power; specificity is the true-negative rate, 1 − α.",
         incorrect_text={
             "reversed": "Sensitivity is a true-positive rate, corresponding to power 1 − β; specificity is a "
-            "true-negative rate, corresponding to 1 − α. The error rates are their complements.",
-            "posterior": "Sensitivity and specificity condition on disease status. The probability of disease "
-            "given a positive result reverses that conditioning and also depends on prevalence.",
+            "true-negative rate, corresponding to 1 − α. The corresponding error rates are one minus these values.",
+            "posterior": "Sensitivity and specificity describe results for people whose disease status is known. The probability of disease "
+            "after a positive result also depends on prevalence: how common the disease is in the tested population.",
         },
     )
 
@@ -2411,26 +2532,33 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 9. Summary and bridge
+    ## 9. Take-home messages
 
-    - A null hypothesis determines the reference distribution of a test statistic.
-    - A p-value is $P(\text{statistic at least as extreme as observed}\mid H_0)$,
-      using an extremeness rule defined by the test and alternative.
-    - Choose direction, assumptions, and $\alpha$ before inspecting the result.
-    - A one-sample z test uses a known population SD; a t test represents uncertainty
-      from estimating that SD and has $n-1$ degrees of freedom.
-    - A matched two-sided test and confidence interval give the same boundary, while
-      the interval also communicates direction and precision.
-    - $\alpha$ is the type-I error probability under a true null; $\beta$ is the
-      type-II error probability for a specified alternative; power is $1-\beta$.
-    - Statistical significance, effect magnitude, uncertainty, study quality, and
-      scientific relevance are separate considerations and should be reported together.
-    - Selective analyses and repeated looks change error rates unless the procedure
-      accounts for them.
+    - A null model describes what results we would expect if a specific claim,
+      often “no change”, and the test's assumptions were true.
+    - A p-value asks how often that model would produce a test statistic as extreme
+      as the observed one or more so, in the direction(s) chosen before the study.
+      It is not the probability that the null hypothesis is true.
+    - Plan the direction, test, and decision threshold $\alpha$ before examining
+      the results. Check that the design and measurements support the assumptions.
+    - SD describes variation between observations; SE describes uncertainty in the
+      sample mean. A one-sample z or t statistic expresses the difference from a
+      reference mean in SE units. Use t when estimating population SD from the sample.
+    - A confidence interval shows the size, direction, and precision of the
+      estimated effect. Matching tests and intervals agree apart from the stated
+      convention at the exact decision boundary.
+    - $\alpha$ controls false alarms when the null is true. Power, $1-\beta$, is the
+      chance of detecting a specified real effect; $\beta$ is the chance of missing it.
+    - Statistical significance does not establish biological importance. Report
+      the estimated effect, confidence interval, and study limitations together.
+      A result that is not significant does not establish “no effect”.
+    - Trying more tests and reporting whichever is significant increases false
+      alarms unless the analysis accounts for those extra opportunities.
 
-    **Next:** Chapter 5 applies this framework to independent groups, paired data,
-    correlations, counts, rank-based alternatives, equivalence, ANOVA, interactions,
-    multiple comparisons, and post-hoc procedures.
+    **Next:** Chapter 5 applies these ideas to comparisons between groups, paired
+    measurements, relationships between variables, and counts. It also covers how
+    to compare several groups, account for multiple tests, and assess whether
+    differences are small enough to be considered biologically negligible.
     """)
 
 
