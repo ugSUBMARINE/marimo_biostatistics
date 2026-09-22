@@ -82,15 +82,24 @@ def _():
 @app.cell
 def _(mo):
     mo.md(r"""
-    A dataset is usually too detailed to understand by inspection alone. Descriptive
-    statistics help us answer three complementary questions:
+    Whether you measure enzyme activity, count microbial colonies, or compare
+    protein concentrations, a table of results can be difficult to interpret.
+    **Descriptive statistics** are numbers and plots that summarize the data you have.
+    An **observation** is one recorded value; a **variable** is what you record,
+    such as height or enzyme activity. We will ask three questions:
 
-    1. **Where are the observations located?** — center and quantiles
-    2. **How much do they vary?** — range, variance, standard deviation, and IQR
-    3. **What does their distribution look like?** — tables and graphical displays
+    1. **What is a typical value?** — describe the center of the data
+    2. **How much do the values differ?** — describe their spread
+    3. **Which values are common or rare?** — examine the distribution, meaning
+       the pattern of values and how often they occur
 
     In this chapter you will work with the artificial height dataset used in the
-    lecture. The notebook is meant to be read from top to bottom, but every control
+    lecture. The same ideas apply to laboratory measurements. A **sample** is the
+    set of observations collected; the **population** is the wider group we want to
+    understand, such as all cultures grown under specified conditions. Here the
+    heights are simulated, not measurements from real students.
+
+    The notebook is meant to be read from top to bottom, but every control
     is live: make a prediction, change a control, and inspect what follows.
 
     **Start here:** inspect the lecture dataset below, then click **Generate a new
@@ -213,9 +222,6 @@ def _(
 @app.cell
 def _(
     data_path,
-    female_beta_alpha,
-    female_beta_beta,
-    female_beta_interval_probability,
     female_height_mean,
     female_height_sd,
     generate_dataset_button,
@@ -247,7 +253,7 @@ def _(
         _source_details = (
             "The generator sampled a target female proportion of "
             f"**{height_dataset['sampled_female_fraction']:.1%}**; after conversion "
-            "to whole students, the realized proportion is "
+            "to whole students, the actual proportion is "
             f"**{height_dataset['realized_female_fraction']:.1%}**."
         )
 
@@ -263,15 +269,15 @@ def _(
                     **{len(height_data)}** observations: **{_n_female}** labeled female
                     and **{_n_male}** labeled male. {_source_details}
 
-                    Each new dataset uses an odd sample size from 91 to 109. Its target
-                    female proportion is drawn from
-                    $\\operatorname{{Beta}}({female_beta_alpha:.1f},
-                    {female_beta_beta:.1f})$; this puts
-                    **{female_beta_interval_probability:.1%}** of the probability between
-                    0.45 and 0.65. Heights are then drawn from the BRFSS-inspired models
-                    $N({female_height_mean:.0f}, {female_height_sd:.1f}^2)$ cm for women
-                    and $N({male_height_mean:.0f}, {male_height_sd:.1f}^2)$ cm for men,
-                    and rounded to 0.1 cm.
+                    Each new dataset contains 91–109 simulated students (always an
+                    odd number). The target percentage labeled female varies randomly,
+                    usually between 45% and 65%. Heights follow bell-shaped models,
+                    centered at **{female_height_mean:.0f} cm** for the female group
+                    and **{male_height_mean:.0f} cm** for the male group. Their standard
+                    deviations, which describe spread, are **{female_height_sd:.1f} cm**
+                    and **{male_height_sd:.1f} cm**, respectively. We explain this
+                    measure below. Heights are rounded to 0.1 cm. These two labels
+                    define the groups in this simplified teaching dataset.
                     """
                 ),
                 kind="info",
@@ -295,7 +301,9 @@ def _(mo):
     ## 1. What kind of variable do we have?
 
     A **categorical** variable records membership in categories. A **numerical**
-    variable records a quantity for which arithmetic may be meaningful.
+    variable records a measured or counted quantity. A numerical code used as a
+    label, such as strain 1 or strain 2, is still categorical: averaging the codes
+    would not describe a biological quantity.
 
     Numerical variables can be **discrete** (counts such as 0, 1, 2, ...) or
     **continuous** (measurements that can, in principle, take any value in an
@@ -304,10 +312,14 @@ def _(mo):
 
     Measurement scales add another distinction:
 
-    - **Nominal:** categories without an order
-    - **Ordinal:** ordered categories, but differences need not be equal
-    - **Interval:** equal differences are meaningful, but zero is arbitrary
-    - **Ratio:** equal differences and ratios are meaningful; zero represents absence
+    - **Nominal:** categories without an order, such as bacterial species.
+    - **Ordinal:** ordered categories, such as disease stages. A step from stage I
+      to II need not represent the same change as a step from III to IV.
+    - **Interval:** equal differences have the same meaning, but zero is a reference
+      point. A rise from 10 to 20 °C equals a rise from 20 to 30 °C; 20 °C is
+      not “twice as hot” as 10 °C.
+    - **Ratio:** both differences and ratios have meaning. A concentration of
+      20 mmol/L is twice 10 mmol/L, and zero means none of the substance is present.
 
     **Try this:** classify height, disease stage, and bacterial species
     in your own words before consulting the selector. Select **Height in
@@ -388,27 +400,41 @@ def _(mo):
 
     ## 2. From raw observations to a distribution
 
-    A histogram groups observations into intervals called **bins**. Its appearance
+    A **histogram** groups observations into intervals called **bins**. Its appearance
     depends on the number and location of those bins, so the data alone do not
     uniquely determine its appearance.
 
     On a **count scale**, bar height is the number of observations in a bin. On a
-    **density scale**, the *area* of a bar represents relative frequency. A density
-    is not itself a probability; probability corresponds to area.
+    **density scale**, bar area (height × width) is the fraction of observations in
+    that bin. For example, an area of 0.20 means 20% of the observations. All bar
+    areas together add to 1. Bar height alone is not a percentage.
+
+    A **frequency polygon** joins the heights at the centers of the bins with lines.
+    The **normal curve** is a smooth, symmetric bell shape. Here it is fitted by
+    matching its mean (average) and standard deviation (SD, a measure of spread)
+    to the displayed data.
 
     **Try this:** keep **All students** selected and compare 5, 15, and 30 bins.
     Watch the shape change while the summary statistics stay fixed. Switch to
     **Use density scale** and read the vertical axis again: area now represents
-    relative frequency. Toggle the frequency polygon and fitted normal curve to
-    distinguish summaries of the bins from a smooth model of the observations.
+    the fraction of observations. Toggle the frequency polygon and fitted normal
+    curve to compare the binned data with a smooth model of the observations.
     Finally compare **Female** and **Male**: this changes which data enter the
     histogram and summary table. A model overlay is a comparison, not evidence
     that the population must be normal.
 
-    The table's **coefficient of variation** is 100 × SD / mean. Here it uses
-    the population SD (divide by n) to describe the displayed heights. It expresses
-    spread relative to the mean as a percentage and is meaningful for positive
-    ratio-scale measurements such as height, not Celsius temperatures.
+    The table previews terms explained in the next sections: the **median** is the
+    middle value after sorting; **quartiles** mark roughly 25%, 50%, and 75% of the
+    ordered data; the **range** is maximum minus minimum; the **interquartile range
+    (IQR)** is the width of the middle half of the data.
+
+    The **coefficient of variation (CV)** is 100 × SD / mean. For example, a mean
+    enzyme activity of 100 U/L and SD of 10 U/L give a CV of 10%. It describes
+    spread relative to the mean and is useful for positive measurements with a
+    meaningful zero. It is unsuitable for Celsius temperatures and unstable when
+    the mean is close to zero. Here CV uses the SD calculated by dividing by the
+    number of observations, $n$. The table calls this “population SD”; this formula
+    describes the displayed values and does not mean they represent everyone.
     """)
 
 
@@ -590,8 +616,9 @@ def _(
                     **What should you notice?** The observations and all numerical
                     summaries remain unchanged when you alter the bin count. Only the
                     visual grouping changes. Also compare the combined sample with its
-                    two subgroups: mixing subpopulations can create a shape that no
-                    individual subgroup has.
+                    two subgroups: combining groups with different typical values
+                    can produce a shape unlike either group alone. The same can happen
+                    when measurements from different culture conditions are combined.
                     """
                 ),
                 kind="warn",
@@ -612,16 +639,24 @@ def _(mo):
 
     ## 3. The arithmetic mean
 
-    For observations $x_1, x_2, \ldots, x_n$, the arithmetic mean is
+    The **arithmetic mean**, usually called the mean or average, is the sum of all
+    values divided by how many there are. We write each value as $x_i$, the number
+    of values as $n$, and the mean as $\bar{x}$ (“x bar”). The symbol $\sum$ means
+    “add up”:
 
     \[
     \bar{x}=\frac{x_1+x_2+\cdots+x_n}{n}
            =\frac{1}{n}\sum_{i=1}^{n}x_i.
     \]
 
-    This is more than a recipe. The mean is the unique center that makes the sum of
-    signed deviations equal to zero. It is also the center that minimizes the sum of
-    squared deviations. The second property gives us a useful derivation.
+    A **deviation** is a value minus a chosen center. It is positive above the
+    center and negative below it. At the mean, these positive and negative
+    differences add to zero: the mean acts as a balance point.
+
+    The mean also gives the smallest possible sum of **squared deviations**:
+    subtract the center from each value, square each difference, then add them.
+    Squaring makes all contributions non-negative and gives more weight to large
+    differences. This way of finding a center is called **least squares**.
 
     **Try this:** keep six example observations and move the candidate center
     below and above their displayed mean. Follow the signed deviations and their
@@ -682,15 +717,17 @@ def _(mean_example_values, mo):
 @app.cell
 def _(mo):
     mo.md(r"""
-    ### Derivation: why does this formula define the least-squares center?
+    ### Optional mathematical detail: why does the mean give the smallest sum?
 
-    Let $c$ be any proposed center and define its total squared discrepancy:
+    You can follow the interactive example without using calculus. Let $c$ be any
+    proposed center. Add up the squared differences from that center:
 
     \[
     S(c)=\sum_{i=1}^{n}(x_i-c)^2.
     \]
 
-    At a minimum, the derivative with respect to $c$ must be zero:
+    The derivative describes how $S(c)$ changes when we move $c$. At the bottom
+    of this smooth U-shaped curve, its slope is zero:
 
     \[
     \begin{aligned}
@@ -701,8 +738,9 @@ def _(mo):
     \end{aligned}
     \]
 
-    Because $S(c)$ is an upward-opening quadratic, this stationary point is its
-    unique minimum. Move the candidate center below to see the geometry.
+    The curve opens upward, so this point is its single minimum. The best center
+    by this rule is therefore the arithmetic mean. Move the candidate center below
+    and find the bottom of the curve.
     """)
 
 
@@ -818,13 +856,20 @@ def _(mo):
     mo.md(r"""
     ### Mean or median?
 
-    The mean uses the magnitude of every value. The median uses only the ordering:
-    half of the observations lie on either side. That makes the mean efficient for
-    many symmetric distributions, but also sensitive to extreme observations.
+    The mean depends on the size of every value. To find the **median**, sort the
+    values from smallest to largest and take the middle one. With an even number
+    of values, average the two middle ones. At least half the values are at or
+    below the median, and at least half are at or above it.
 
-    In a roughly symmetric distribution, mean and median are often close. A long
-    right tail tends to pull the mean above the median; a long left tail tends to
-    pull it below the median. This is a useful pattern, not a definition of skewness.
+    The mean and median are often close when the distribution is **symmetric**,
+    with similar shapes on both sides of its center. A **tail** is the part that
+    extends toward unusually low or high values. A long tail toward high values
+    (a **right-skewed** distribution) often pulls the mean above the median.
+    A long tail toward low values often pulls it below. For example, a few cultures
+    with very high protein yields can raise the mean substantially while barely
+    changing the median. Choose the summary that answers your scientific question:
+    the mean describes the amount per observation when sharing the total equally;
+    the median describes the middle observation.
 
     The next control adds one hypothetical measurement to the currently selected
     group. **Try this:** start at 170 cm, then move the additional height to 220
@@ -973,14 +1018,13 @@ def _(height_subset, mo):
             ### What about the mode?
 
             The **mode** is the most frequent recorded value. For the selected group,
-            the maximum frequency is **{highest_recorded_frequency}**, and the tied
-            recorded modes are **{recorded_mode_text} cm**.
+            most frequent value or values occur **{highest_recorded_frequency}**
+            time(s): **{recorded_mode_text} cm**.
 
-            This example shows a limitation: height is continuous, but it was rounded
-            to 0.1 cm, producing several ties. An exact sample mode is therefore not a
-            stable description of the distribution's peak. A histogram's modal bin can
-            be more interpretable, but—as the binning laboratory showed—it depends on
-            the chosen intervals.
+            Rounding heights to 0.1 cm can make different measurements have the same
+            recorded value. Changing the rounding can therefore change the mode.
+            The tallest histogram bar identifies the most frequent interval (the
+            **modal bin**), but this also depends on the chosen bin boundaries.
             """
         ),
         kind="info",
@@ -995,14 +1039,15 @@ def _(mo):
     ## 4. Alternative definitions of the mean
 
     The arithmetic mean is the appropriate center when observations contribute
-    equally and combine **additively**. It is not, however, the only meaningful
-    average. The scientific question and the process that generated the data determine
-    which definition is useful.
+    equally and combine **additively**. Other averages are
+    useful for different questions and different ways of combining measurements.
 
     ### The weighted arithmetic mean
 
     A weighted mean allows observations or group summaries to make unequal, but
-    explicitly justified, contributions:
+    explicitly justified, contributions. A **weight**, $w_i$, sets how much value
+    $x_i$ contributes. Multiply each value by its weight, add these products, then
+    divide by the sum of the weights. At least one weight must be positive:
 
     \[
     \bar{x}_w=\frac{\sum_{i=1}^{n}w_i x_i}{\sum_{i=1}^{n}w_i},
@@ -1023,17 +1068,19 @@ def _(mo):
       \bar{x}=\frac{n_1\bar{x}_1+n_2\bar{x}_2}{n_1+n_2}.
       \]
 
-    - **Combining estimates with different precision.** In a meta-analysis, an
-      estimate with a smaller variance can receive more weight, often proportional to
-      its inverse variance, $w_i=1/s_i^2$. The assumptions behind such weights belong
-      to inferential statistics and must be checked.
+    - **Combining results from several studies.** A meta-analysis combines estimates
+      from separate studies. More precise (less uncertain) estimates may
+      receive more weight. Choosing these weights requires information about each
+      estimate's uncertainty, which we address in later chapters.
     - **Unequal contributions to a pooled sample.** Mean concentrations from aliquots
       of different volumes can be weighted by volume when the target is the
-      concentration of the combined material.
+      concentration of the combined material, provided volumes add and the substance
+      is not lost or produced on mixing. For example, mixing 1 mL at 2 mmol/L with
+      3 mL at 6 mmol/L gives $(1 \times 2 + 3 \times 6)/4 = 5$ mmol/L.
 
-    Weights should follow from the design or the estimand—not from whether a result is
-    convenient or statistically significant. A weighted mean cannot repair biased or
-    incomparable measurements.
+    Choose weights based on how the experiment was designed and what you want to
+    measure. Weighting cannot correct a systematic measurement error or make
+    measurements from incompatible conditions comparable.
     """)
 
 
@@ -1042,7 +1089,10 @@ def _(mo):
     mo.md(r"""
     ### The geometric mean
 
-    For strictly positive observations, the geometric mean is
+    The **geometric mean** summarizes values that combine by multiplication, such
+    as successive growth factors. For positive values,
+    multiply the $n$ values and take the $n$th root. The symbol $\prod$ means
+    “multiply together”:
 
     \[
     \bar{x}_{\mathrm{geom}}
@@ -1050,25 +1100,32 @@ def _(mo):
       =\exp\left(\frac{1}{n}\sum_{i=1}^{n}\log x_i\right).
     \]
 
-    Thus, it is the arithmetic mean of the **log-transformed values**, transformed
-    back to the original scale. It describes a multiplicative center: equal fold
-    changes above and below it balance one another. For example, the geometric mean
+    An equivalent calculation takes the natural logarithm ($\log$ or $\ln$) of
+    each value, averages these logarithms, and applies $\exp$ to return to the
+    original scale. Logarithms turn multiplication into addition; $\exp$ reverses
+    this transformation. A **fold change** is a ratio: two-fold means twice as large.
+    The geometric mean balances equal fold changes above and below it. For example, the geometric mean
     of 5 and 20 is 10 because one value is half of 10 and the other is twice 10. Their
     arithmetic mean, 12.5, answers a different, additive question.
 
     This distinction is especially useful when positive measurements are approximately
-    **log-normally distributed**:
+    **log-normally distributed**: their logarithms follow a symmetric, bell-shaped
+    normal distribution. We write this as:
 
     \[
     \log(X)\sim N(\mu,\sigma^2).
     \]
 
-    On the original scale such data are right-skewed and may span several orders of
-    magnitude; on the log scale they are approximately symmetric. The population
-    geometric mean is $\exp(\mu)$, which is also the median of an exactly log-normal
-    distribution. Its arithmetic mean is larger,
-    $\exp(\mu+\sigma^2/2)$, and represents the expected amount on the original scale.
-    Neither is universally better: they summarize different scientific targets.
+    Here $X$ is a positive measurement, $\sim$ means “follows this distribution”,
+    and $N(\mu,\sigma^2)$ denotes a normal distribution with mean $\mu$ (“mu”)
+    and standard deviation $\sigma$ (“sigma”) **on the logarithmic scale**.
+
+    On the original scale, these data have a long right tail and may span several
+    **orders of magnitude**. For an exactly log-normal
+    population, the geometric mean is $\exp(\mu)$ and equals the median. The
+    arithmetic mean is larger, $\exp(\mu+\sigma^2/2)$, because high values in the
+    tail contribute strongly. These formulas describe the theoretical model below;
+    real measurements need not follow it exactly.
     """)
 
 
@@ -1077,9 +1134,10 @@ def _(mo):
     mo.md(r"""
     #### Explore multiplicative variation
 
-    These curves describe a **theoretical population**, not a sample or the height
-    dataset. Here $\log$ means the natural logarithm, and $X$ is a positive
-    measurement in a fixed reference unit.
+    These curves describe a **theoretical population**: an idealized model of all
+    possible measurements, rather than a finite set of observations. Here $\log$
+    means the natural logarithm, and $X$ is a positive measurement in a fixed
+    reference unit.
 
     **Try it:** hold μ fixed and increase σ. The geometric mean stays fixed while
     the arithmetic mean rises as the right tail grows. Then increase μ: both means
@@ -1242,20 +1300,20 @@ def _(mo):
                 r"""
                 #### Biological measurements for which a geometric mean may be useful
 
-                - **Binding and inhibition constants** such as $K_d$, $K_i$, $IC_{50}$,
-                  and $EC_{50}$. These positive concentration-like quantities often
-                  span orders of magnitude, and experimental variation is frequently
-                  more naturally expressed as a fold difference. Averaging their
-                  logarithms—and reporting the back-transformed mean—can therefore be
-                  more interpretable than averaging the raw values.
+                - **Repeated measurements of binding or response concentrations.**
+                  Examples include the dissociation constant $K_d$, inhibition
+                  constant $K_i$, and concentrations giving 50% inhibition or half
+                  the maximal response ($IC_{50}$ and $EC_{50}$). When repeated
+                  estimates under comparable conditions vary mainly by fold
+                  differences, a geometric mean can be a useful summary.
                 - **Gene-expression fold changes and other response ratios.** A
                   two-fold increase and a two-fold decrease are symmetric on a log
                   scale; their geometric mean fold change is 1, indicating no typical
                   multiplicative change.
                 - **Microbial counts, viral loads, antibody titres, metabolite or
                   hormone concentrations, fluorescence intensities, and enzyme
-                  activities** when their empirical distribution is approximately
-                  log-normal and the measurement is strictly positive.
+                  activities** when all values are positive and their logarithms
+                  have an approximately bell-shaped distribution.
                 - **Growth factors or repeated proportional changes.** If a quantity
                   changes by successive multiplicative factors, the geometric mean of
                   those factors describes the typical factor per step.
@@ -1263,8 +1321,9 @@ def _(mo):
                 Consider three $K_d$ estimates: 1, 10, and 100 nM. They are evenly
                 spaced on a logarithmic scale. Their geometric mean is 10 nM, whereas
                 their arithmetic mean is 37 nM. The geometric mean captures the middle
-                *order of magnitude*; the arithmetic mean captures the mean amount in
-                nM.
+                value on the logarithmic scale; the arithmetic mean gives more
+                weight to the largest estimate. Neither calculation alone tells us
+                how accurately the binding constant has been measured.
                 """
             ),
             mo.callout(
@@ -1277,9 +1336,11 @@ def _(mo):
 
                     Zeros, negative values, and measurements reported as “below the
                     detection limit” cannot simply be logged. Adding an arbitrary
-                    pseudocount changes the result and may introduce bias; censored-data
-                    methods or a measurement-specific model may be needed. Skewness by
-                    itself is not a sufficient reason to use a geometric mean.
+                    constant (sometimes called a **pseudocount**) changes the result.
+                    A value below the detection limit means its exact value is unknown,
+                    not that it is zero. Such data need methods that account for what
+                    the assay can detect. A long right tail alone is not a sufficient
+                    reason to use a geometric mean.
                     """
                 ),
                 kind="warn",
@@ -1295,9 +1356,14 @@ def _(mo):
 
     ## 5. Quantiles and measures of spread
 
-    An α-quantile $Q_{\alpha}$ is a value at or below which approximately a
-    proportion α of the observations lies. The median is $Q_{0.5}$; the first and
-    third quartiles are $Q_{0.25}$ and $Q_{0.75}$.
+    A **quantile** is a cutoff in the ordered data. For example, the 0.90 quantile
+    is a value at or below which roughly 90% of observations lie. It is also called
+    the **90th percentile**: percentiles express the same idea using percentages.
+    In $Q_{\alpha}$, $\alpha$ (“alpha”) specifies the fraction, such as 0.90.
+
+    The **quartiles** divide the ordered data into four roughly equal parts. The
+    first quartile, Q1 or $Q_{0.25}$, marks 25%; the median, Q2 or $Q_{0.5}$,
+    marks 50%; and the third quartile, Q3 or $Q_{0.75}$, marks 75%.
 
     The **interquartile range** is
 
@@ -1313,7 +1379,10 @@ def _(mo):
     compare its position in the ordered data. Then select 0.90 and complete the
     sentence “About 90% of these heights are at or below …”. Interpolation and
     tied values mean the sample fraction need not equal the requested level
-    exactly. The selected group from the histogram activity is used here too.
+    exactly. **Interpolation** means estimating a cutoff between two neighboring
+    recorded values; **ties** are equal recorded values. Different calculation
+    conventions can give slightly different quantiles for small datasets.
+    The selected group from the histogram activity is used here too.
     """)
 
 
@@ -1399,8 +1468,9 @@ def _(
         [
             quantile_figure,
             mo.md(
-                "For finite samples, ties and interpolation conventions can make the "
-                "observed percentage differ slightly from exactly 100α%."
+                "The percentage shown counts the actual values at or below the cutoff. "
+                "It may differ from the selected percentage because values can be tied "
+                "and the cutoff can fall between recorded values."
             ),
         ]
     )
@@ -1416,7 +1486,9 @@ def _(mo):
     mo.md(r"""
     ### Variance and standard deviation
 
-    The variance treats every deviation from the mean as a contribution to spread:
+    **Variance** describes spread by averaging the squared differences from the
+    mean. For the displayed set of $n$ values, we divide by $n$. The **standard
+    deviation (SD)** is the square root of this variance:
 
     \[
     \sigma^2=\frac{1}{n}\sum_{i=1}^{n}(x_i-\bar{x})^2,
@@ -1426,7 +1498,11 @@ def _(mo):
 
     Squaring prevents positive and negative deviations from cancelling. Variance is
     measured in squared units (cm²); the square root returns the standard deviation
-    to the original unit (cm).
+    to the original unit (cm). SD describes the size of the differences from the
+    mean, but it is not the simple average of their absolute sizes. A small SD means
+    values cluster closely around the mean; a large SD means they are more spread
+    out. In laboratory data this spread can reflect both biological differences
+    and measurement variation. SD alone cannot separate these sources.
 
     This worked table reuses the observations selected in Section 3. Changing
     that section's example sample size or the selected height group updates it.
@@ -1477,9 +1553,11 @@ def _(compact_table, mean_example_values, mo, pd, responsive_row):
             mo.callout(
                 mo.md(
                     "Here we are **describing these displayed values**, so the divisor is "
-                    "n. When using a sample to estimate a population variance, the usual "
-                    "unbiased estimator divides by n − 1. We derive that adjustment in "
-                    "the inferential-statistics chapter."
+                    "n. When using an independent random sample to estimate variance in a "
+                    "wider population, we usually divide by n − 1 instead. This corrects "
+                    "the tendency to underestimate variance when the same data provide "
+                    "both the mean and the deviations. The square root gives the sample "
+                    "SD shown earlier. We explain this adjustment in the next chapter."
                 ),
                 kind="info",
             ),
@@ -1494,21 +1572,27 @@ def _(mo):
 
     ## 6. Showing distributions honestly
 
-    A **box plot** displays the median, quartiles, IQR, and whiskers. Points beyond
-    $1.5\,\mathrm{IQR}$ are often flagged, but “flagged” does not mean erroneous.
+    A **box plot** shows the middle half of the values in a box from Q1 to Q3,
+    with a line at the median. In this plot, the **whiskers** extend to the most
+    extreme observed values still within $Q1 - 1.5\,\mathrm{IQR}$ and
+    $Q3 + 1.5\,\mathrm{IQR}$. Values beyond these limits are marked separately as
+    possible **outliers**, unusually distant observations. They may reflect errors
+    or real biological variation; the rule alone is not a reason to remove them.
 
-    A **violin plot** adds a smoothed estimate of distribution shape. This can be
-    helpful, but with small samples its bumps may reflect smoothing choices rather
-    than genuine population structure. Raw observations remain valuable.
+    A **violin plot** shows a smoothed distribution: wider regions indicate where
+    values are more concentrated. With few observations, apparent bumps can depend
+    strongly on the smoothing settings. Keep the individual points visible to
+    check what the summary is based on. Here points are shifted slightly sideways
+    so they do not all overlap; only their vertical positions represent heights.
 
     **Try this:** begin with **Raw points**, switch to **Raw points + box plot**,
     then to **Raw points + violin plot**. The same observations remain visible
     in every view. Locate the center and spread of each group, then ask which
     detail the added summary
     makes easier to see and which it conceals. A box contains the middle half of
-    the observations; a violin's width represents estimated density, not an
-    uncertainty interval. The box plot also marks the mean with a triangle;
-    the violin plot marks the median with a horizontal line.
+    the observations; a violin's width shows where values are concentrated. It does
+    not show how precisely the population mean is known. The box plot also marks
+    the mean with a triangle; the violin plot marks the median with a horizontal line.
     """)
 
 
@@ -1615,31 +1699,44 @@ def _(mo):
 
     ## 7. Comparing two distributions: Cohen's d
 
-    Differences can be reported in the original unit, as a percentage, or relative
-    to the distributions' spread. Cohen's $d$ is a standardized mean difference:
+    A difference between group means is easier to interpret when we also know how
+    much the observations vary within each group. **Cohen's $d$** expresses the
+    difference in units of a shared standard deviation. For two samples:
 
     \[
-    d=\frac{\mu_2-\mu_1}{s_{\mathrm{pooled}}}.
+    d=\frac{\bar{x}_2-\bar{x}_1}{s_{\mathrm{pooled}}}.
     \]
 
-    For two samples, a common pooled standard deviation is
+    A value of $d=1$ means the means are one shared SD apart; $d=0$ means they are
+    equal, although the groups can still differ in spread or shape. The sign
+    indicates which group has the higher mean and reverses if we swap group order.
+
+    The **pooled SD** combines the variation *within* the two groups; it is not
+    the SD of all observations mixed together. With group sizes $n_1$ and $n_2$
+    and sample SDs $s_1$ and $s_2$, a common formula is
 
     \[
     s_{\mathrm{pooled}}
       =\sqrt{\frac{(n_1-1)s_1^2+(n_2-1)s_2^2}{n_1+n_2-2}}.
     \]
 
-    Because numerator and denominator have the same unit, $d$ is **unitless**. It is
-    still important to report the original-unit difference, uncertainty, and
-    biological relevance.
+    The formula combines the squared SDs, giving larger samples more weight, then
+    takes the square root. A shared SD is most straightforward to interpret when
+    the two groups have similar spreads. Because the mean difference and SD have
+    the same unit, their units cancel: $d$ is **unitless**. Still report the
+    difference in the original units, such as U/L of enzyme activity, so readers
+    can judge its biological importance.
 
     **Try the model explorer below:** set both SDs to 7.5 and compare mean
-    differences of 0, 15, and 30. Watch standardized separation, overlap, and
-    probability of superiority together. Restore the difference to 15, then
-    increase both SDs to 15: the same absolute difference becomes less distinct
+    differences of 0, 15, and 30. Watch $d$ and the shaded overlap between the
+    curves. The third readout gives the probability that an independently drawn
+    value from group 2 exceeds one from group 1. It compares individual values,
+    not the probability that one group mean is greater than the other. Restore the
+    difference to 15, then increase both SDs to 15: the same absolute difference becomes less distinct
     relative to variation. Finally change just one SD to explore unequal spreads.
     These sliders alter two theoretical normal distributions; they do not change
-    the empirical height comparison reported above the controls.
+    the comparison calculated from the height data above the controls. In the plot
+    legend, $\mu$ denotes a model's mean and $\sigma$ its SD.
     """)
 
 
@@ -1659,8 +1756,9 @@ def _(cohen_d_sample, height_data, mo):
             **{observed_difference:.1f} cm**, and the sample Cohen's d is
             **{observed_d:.2f}**.
 
-            This describes the standardized separation in this artificial dataset. It
-            does not quantify uncertainty and is not, by itself, a significance test.
+            The means are **{abs(observed_d):.2f} pooled SDs** apart. This describes
+            the current dataset; it does not tell us how much the estimate would
+            change if we collected another sample.
             """
         ),
         kind="info",
@@ -1790,11 +1888,12 @@ def _(
             effect_figure,
             mo.md(
                 r"""
-                For this theoretical explorer, the pooled spread is the equal-weight
-                root-mean-square of the two population SDs. The overlap is calculated
-                numerically for the displayed normal densities. If the SDs differ, the
-                same value of $d$ need not imply the same overlap or classification
-                behavior.
+                These curves are models with no sample sizes. Here the shared spread
+                is $\sqrt{(\sigma_1^2+\sigma_2^2)/2}$: square the two SDs, average
+                them with equal weight, then take the square root. The shaded overlap
+                is the area under the lower of the two curves, expressed as a
+                percentage. If the SDs differ, the same $d$ can correspond to different
+                amounts of overlap.
                 """
             ),
         ]
@@ -1811,11 +1910,13 @@ def _(mo):
     mo.callout(
         mo.md(
             r"""
-            **Interpret with care.** Cohen's $d$ standardizes a difference; it does not
-            decide whether the difference matters biologically. A 2 cm shift could be
-            crucial for one measurement and irrelevant for another. It also does not
-            express how precisely $d$ has been estimated. Those questions lead to
-            confidence intervals and inferential statistics in the next chapter.
+            **Interpret with care.** Cohen's $d$ describes the size of a mean
+            difference relative to spread. It does not decide whether that difference
+            matters biologically: a small change in enzyme activity may matter near
+            a functional threshold, even if $d$ is small. Nor does $d$ alone tell us
+            how precisely the difference is known. The next chapter introduces
+            **inferential statistics** (using a sample to learn about a wider
+            population) and ways to describe uncertainty in our estimates.
             """
         ),
         kind="warn",
@@ -1917,20 +2018,20 @@ def _(review_feedback, review_question_2):
         review_question_2.value,
         correct_value="mean_sd",
         correct_text=(
-            "**Correct.** The mean uses every observed magnitude, and the standard "
+            "**Correct.** The mean uses the size of every value, and the standard "
             "deviation gives especially large weight to distant values by squaring "
-            "their deviations. The median and IQR depend mainly on ranks and are "
+            "their deviations. The median and IQR depend mainly on positions in the sorted data and are "
             "therefore more resistant."
         ),
         incorrect_text=(
             {
-                "median_iqr": "Both the median and IQR are resistant to one extreme magnitude: they depend on "
+                "median_iqr": "Both the median and IQR are resistant to one extreme value: they depend on "
                 "positions in the ordered data. They may shift when a value is added, but do not "
                 "grow without bound as that one value increases.",
-                "median_sd": "SD is sensitive to the extreme magnitude, but the median is resistant because it is "
-                "determined by the middle ranks. The mean is the sensitive measure of location to "
+                "median_sd": "SD is sensitive to the extreme value, but the median is resistant because it is "
+                "determined by the middle positions in the sorted data. The mean is the sensitive measure of center to "
                 "pair with SD here.",
-                "mean_iqr": "The mean is sensitive to the extreme magnitude, but the IQR describes the middle "
+                "mean_iqr": "The mean is sensitive to the extreme value, but the IQR describes the middle "
                 "half of the ordered observations. SD, which uses every squared deviation, is the "
                 "sensitive measure of spread here.",
             }
@@ -2054,15 +2155,15 @@ def _(mo):
       numbers.
     - The arithmetic mean is both a balance point and the center that minimizes
       squared deviations.
-    - Use a weighted mean when contributions differ for a defensible reason, and a
-      geometric mean when positive data and the scientific question are naturally
-      multiplicative.
-    - Mean and standard deviation use every magnitude and are sensitive to extremes;
-      median and IQR are more resistant.
+    - Use a weighted mean when the experiment justifies unequal contributions.
+      Consider a geometric mean when positive values combine by multiplication
+      and fold differences answer the scientific question.
+    - Mean and standard deviation use the size of every value and are sensitive
+      to extremes; median and IQR are more resistant.
     - Histograms, box plots, and violin plots preserve different aspects of a
       distribution. None is a complete description by itself.
-    - Cohen's $d$ expresses mean separation relative to spread, but scientific
-      meaning and uncertainty still have to be considered.
+    - Cohen's $d$ expresses the difference between means relative to spread.
+      Biological importance and uncertainty still need separate consideration.
 
     **Next:** We will treat a dataset as a sample from a wider population and ask how
     accurately its summaries estimate unknown population quantities.
