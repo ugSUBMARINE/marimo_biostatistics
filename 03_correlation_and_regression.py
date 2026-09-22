@@ -73,28 +73,33 @@ def _():
 @app.cell
 def _(mo):
     mo.md(r"""
-    A single variable has a distribution. When two measurements are recorded on the
-    same observation unit, we can also ask whether and how they vary together. This
-    chapter develops two related but different tools:
+    Do faster-flowing rivers tend to contain more dissolved oxygen? Does reaction
+    rate rise with substrate concentration? Such questions need **paired measurements**:
+    both values must come from the same river, culture, sample, or experiment.
+    This chapter develops two tools for describing these relationships:
 
-    - **correlation** summarizes the direction and strength of an association;
-    - **regression** specifies a directional model for a response conditional on one
-      or more predictors.
+    - **Correlation** gives a number describing how strongly two measurements tend
+      to increase together, or one tends to decrease as the other increases.
+    - **Regression** estimates an outcome, called the **response**, using one or more
+      other measurements, called **predictors**. For example, we use flow speed to
+      estimate average oxygen concentration.
 
     By the end of the chapter, you should be able to:
 
     1. interpret covariance, Pearson correlation, and Spearman rank correlation;
     2. explain why every correlation must be inspected together with a plot;
-    3. quantify uncertainty in a correlation with Fisher's transformation or a
-       paired bootstrap;
+    3. explain how much a correlation estimate might vary between samples and use
+       two methods to calculate an interval expressing that uncertainty;
     4. interpret slopes, residuals, $R^2$, confidence bands, and prediction
        intervals;
-    5. distinguish statistical adjustment from a causal claim about confounding.
+    5. explain what accounting for a third measurement can tell us, and why this
+       does not by itself show that one variable causes another to change.
 
-    > **Two-minute preview:** Correlation is symmetric and unitless. Regression is
-    > directional and retains the units of the response and predictor. Both can be
-    > distorted by unusual observations, restricted ranges, nonlinear structure,
-    > and omitted variables, so the scatter plot always comes first.
+    > **Two-minute preview:** Swapping the two measurements leaves their correlation
+    > unchanged. Regression asks a specific question, such as predicting oxygen from
+    > flow speed; reversing that question generally gives a different fitted line.
+    > Always plot the data first: one number can hide curves, unusual observations,
+    > and differences between groups.
     """)
 
 
@@ -396,9 +401,17 @@ def _(mo):
     headings are retained in the source file and in this table; shorter English
     aliases are used only inside calculations.
 
-    The dataset mixes metric measurements, ordinal scores, and binary indicators.
-    That distinction matters: Pearson correlation is designed for metric variables,
-    while ranks provide a more defensible summary for ordinal scores.
+    The dataset contains three types of values:
+
+    - **Measurements with meaningful numerical differences**, such as temperature
+      and oxygen concentration (often called *metric* variables).
+    - **Ordered, or ordinal, scores**, such as water quality from 1 to 20. A change
+      from 2 to 3 need not represent the same biological difference as 12 to 13.
+    - **Binary indicators**, with two possible values: for example, snail presence
+      is coded as 1 and absence as 0.
+
+    Pearson correlation summarizes straight-line relationships between measurements.
+    Spearman correlation uses their order and is often more suitable for ordered scores.
 
     **Explore the table:** use the search box to find a row, the page controls to
     see all 24 rivers, and horizontal scrolling to reach the remaining columns.
@@ -440,23 +453,39 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 1. Bivariate data, covariance, and Pearson correlation
+    ## 1. Paired measurements, covariance, and Pearson correlation
 
-    A scatter plot preserves the paired structure: every point combines an $x$ and
-    a $y$ measurement from the same river. Marginal distributions describe each
-    variable separately, but they do not show how the measurements are paired.
+    In a **scatter plot**, every point combines an $x$ and a $y$ measurement from
+    the same river. Separate histograms of flow speed and oxygen would show their
+    individual distributions, but lose the information about which values belong together.
 
-    Sample covariance averages products of centered values:
+    **Covariance** describes whether the two measurements tend to be above their
+    respective means together, or whether one tends to be above its mean when the
+    other is below. To calculate it, subtract each variable's mean, multiply the
+    two differences for each river, then sum and divide by $n-1$:
 
     $$s_{xy}=\frac{1}{n-1}\sum_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y}).$$
 
-    Points in the upper-right and lower-left quadrants contribute positively;
-    points in the other two quadrants contribute negatively. Pearson's correlation
-    standardizes covariance by both sample standard deviations:
+    Here $n$ is the number of rivers, $i$ identifies a river, and $\bar{x}$ and
+    $\bar{y}$ are the sample means. Dividing by $n-1$ accounts for estimating those
+    means from the same sample.
+
+    Relative to the dashed mean lines, points in the upper-right and lower-left
+    regions contribute positively: both differences have the same sign. In the
+    other two regions the signs differ, giving negative contributions.
+
+    Covariance has units of x-units × y-units, making its size hard to compare
+    between different measurements. **Pearson correlation**, $r$, removes these
+    units by dividing by both standard deviations, $s_x$ and $s_y$ (measures of
+    how widely each variable is spread around its mean):
 
     $$r=\frac{s_{xy}}{s_xs_y}.$$
 
-    This makes $r$ dimensionless and constrains it to the interval $[-1,1]$.
+    The result has no units and lies between $-1$ and $1$. Values near $1$ indicate
+    a close upward straight-line pattern; values near $-1$ indicate a close downward
+    pattern. A value near zero indicates little **linear**, or straight-line,
+    association, but can still hide a strong curved relationship. Correlation is
+    undefined if either variable has no variation.
 
     **Try this:** start with flow speed on the horizontal axis and oxygen on the
     vertical axis. Predict the sign of $r$, then switch the horizontal variable to
@@ -627,6 +656,10 @@ def _(mo):
     mo.md(r"""
     ### Interactive laboratory: what controls the observed correlation?
 
+    Here **slope** controls how steeply the simulated line rises or falls, and
+    **noise** adds random scatter around it. The noise standard deviation (SD)
+    controls the amount of scatter; $n$ is the number of simulated pairs.
+
     Before moving the controls, predict what will happen to $r$ when noise increases
     or when the sample size increases. Sample size changes the stability of the
     estimate, but it does not mechanically force an observed correlation upward.
@@ -635,7 +668,7 @@ def _(mo):
     noise to 1 and move the slope through 0 to −1. Watch the cloud tilt and $r$
     change sign. Finally compare $n=8$ and $n=200$ at the same slope and noise.
     Each change updates immediately; each point is one simulated pair. Sample
-    size changes the dataset, so $r$ may fluctuate rather than change monotonically.
+    size changes the dataset, so $r$ may move up and down rather than steadily increase.
     """)
 
 
@@ -741,12 +774,15 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 2. Plot first: outliers, nonlinear structure, and range restriction
+    ## 2. Plot first: unusual points, curves, and a narrower range
 
     A correlation coefficient compresses an entire point cloud into one number.
     Anscombe's quartet shows why that compression can be dangerous: four datasets
     have nearly identical means, variances, correlations, and regression lines but
-    fundamentally different structures.
+    very different point patterns. An **outlier** is an observation that stands
+    apart from the others; a **nonlinear relationship** follows a curve rather
+    than a straight line. **Range restriction** means looking at only a narrow
+    part of the values, such as rivers with similar flow speeds.
     """)
 
 
@@ -829,8 +865,8 @@ def _(
             mo.callout(
                 mo.md(
                     "**Plot first, summarize second.** Dataset II is curved, III is "
-                    "dominated by an unusual response, and IV by a high-leverage "
-                    "predictor. None of those facts is visible in $r$ alone."
+                    "strongly affected by one unusual y-value, and IV by a single point "
+                    "far from the others along the x-axis. None of those facts is visible in $r$ alone."
                 ),
                 kind="warn",
             ),
@@ -860,7 +896,7 @@ def _(mo):
 @app.cell
 def _(mo):
     influence_x = mo.ui.slider(
-        0.0,
+        0.2,
         1.4,
         step=0.02,
         value=1.0,
@@ -869,10 +905,10 @@ def _(mo):
         label="Influential point: flow speed [m/s]",
     )
     influence_y = mo.ui.slider(
-        0.0,
+        0.4,
         18.0,
         step=0.2,
-        value=7.5,
+        value=7.4,
         show_value=True,
         full_width=True,
         label="Influential point: oxygen [mg/L]",
@@ -996,8 +1032,8 @@ def _(
                 influence_figure,
                 mo.callout(
                     mo.md(
-                        "A point far from the predictor mean has high leverage and "
-                        "can rotate the fitted line. Restricting the observed range "
+                        "A point far from the average x-value has high leverage: its "
+                        "position gives it the potential to rotate the fitted line. Restricting the observed range "
                         "can weaken or otherwise change $r$ even when the underlying "
                         "biological relationship is unchanged."
                     ),
@@ -1016,16 +1052,38 @@ def _(mo):
 
     ## 3. Uncertainty in a correlation coefficient
 
-    An observed $r$ is an estimate. Across repeated samples, its distribution is
-    asymmetric when the population correlation is near $-1$ or $1$. Fisher's
-    transformation moves the bounded coefficient to an unbounded scale:
+    A different sample of rivers would usually give a different $r$. The
+    **population correlation**, written $\rho$ (rho), is the correlation in the
+    wider set of rivers we want to learn about. Our sample only estimates it.
+
+    A **95% confidence interval** expresses uncertainty in that estimate. If we
+    repeatedly sampled and calculated intervals in the same way, about 95% would
+    contain the population correlation, provided the method's assumptions hold.
+    It is not a range containing 95% of individual river measurements.
+
+    When $\rho$ is near $-1$ or $1$, sample correlations have less room to vary
+    towards the nearby boundary, so their distribution can be uneven rather than
+    bell-shaped. **Fisher's transformation** converts $r$ to a scale called $z$
+    on which a normal, bell-shaped approximation works better:
 
     $$z=\operatorname{atanh}(r)=\frac{1}{2}\ln\left(\frac{1+r}{1-r}\right),
     \qquad SE_z\approx\frac{1}{\sqrt{n-3}}.$$
 
-    An approximate interval is constructed on the $z$ scale and transformed back
-    with $r=\tanh(z)$. A bootstrap offers a different approximation by resampling
-    the observed **rows** with replacement.
+    In this formula, $\ln$ is the natural logarithm and $SE_z$ is the **standard
+    error**: the approximate spread of $z$ estimates across repeated samples.
+    We calculate the interval on the $z$ scale, then convert its endpoints back
+    to correlation values with $r=\tanh(z)$, the inverse transformation.
+    The formula assumes independent pairs and an approximately joint normal
+    distribution: a roughly oval cloud without pronounced curves or outliers.
+
+    A **paired bootstrap** instead repeatedly draws whole rows from the observed
+    data **with replacement**: a row can be selected more than once, and some
+    rows may be omitted. Each new dataset has the original number of rows. Its
+    correlation helps estimate how much $r$ might vary between samples.
+    Both methods assume independent observations: one observation should not
+    provide information about another beyond the shared population pattern.
+    Repeated measurements from the
+    same river or culture cannot simply be treated as additional independent samples.
 
     **Try the sampling experiment:** choose $\rho=0.9$ and $n=10$, then click
     **Run a new simulation**. Each histogram summarizes correlations from many
@@ -1034,10 +1092,10 @@ def _(mo):
     should cluster more tightly around the population value.
 
     The repetition count controls how precisely the simulation describes the
-    sampling distribution; it does not add observations to any one sample. Settings
-    take effect only when you press the button. Press it again without changing
-    settings to see Monte Carlo variation; the caption records the settings used
-    for the displayed result.
+    distribution of estimates across samples; it does not add observations to any
+    one sample. Settings take effect only when you press the button. Press it again
+    without changing settings to see variation due to the random simulation.
+    The caption records the settings used for the displayed result.
     """)
 
 
@@ -1210,7 +1268,12 @@ def _(mo):
     Here we resample the observed dataset rather than generate new rivers from a
     known population. Each histogram value comes from resampling whole $(x,y)$
     rows and recalculating $r$. The shaded region spans the middle 95% of these
-    estimates. The selector and repetition count are applied only when you click
+    estimates; its endpoints form the **percentile bootstrap interval**. This is
+    an approximation to a confidence interval, and can be unreliable with small
+    samples or influential outliers. Agreement between methods does not guarantee
+    accuracy. An interval including zero leaves zero linear correlation compatible
+    with the data; it does not establish the absence of a relationship.
+    The selector and repetition count are applied only when you click
     the button; its caption identifies the currently displayed dataset.
     Increasing repetitions makes the bootstrap calculation more stable, but does
     not remove outlier influence or increase the original sample size.
@@ -1401,14 +1464,20 @@ def _(mo):
 
     ## 4. Spearman rank correlation
 
-    Spearman's coefficient is Pearson correlation applied to the ranks of both
-    variables. Tied observations receive their average rank. Ranking discards
-    metric distances but preserves order, so Spearman correlation describes a
-    **monotonic** rather than specifically linear association.
+    A **rank** is a value's position when observations are ordered from smallest
+    to largest. Spearman correlation calculates Pearson correlation using these
+    ranks instead of the original values. **Ties** are equal values: if two values
+    share positions 2 and 3, both receive rank 2.5.
 
-    This is useful for ordinal variables such as the water-quality and
-    population-density scores, and for metric relationships that are monotonic but
-    strongly curved. It is not a general detector of every nonlinear pattern.
+    Ranking keeps order but discards the size of differences. Spearman correlation
+    describes a **monotonic relationship**: as one measurement increases, the other
+    tends consistently to increase, or consistently to decrease. The trend can
+    bend; it need not follow a straight line.
+
+    This is useful for ordered scores and for curved trends, such as reaction rate
+    rising towards a plateau as substrate concentration increases. Like Pearson's
+    $r$, Spearman correlation ranges from $-1$ to $1$. Neither reliably summarizes
+    a relationship that reverses direction, such as growth peaking at an optimum temperature.
 
     **Try this:** use the synthetic example with curvature 1 (an approximately
     straight relationship), then increase it to 2.5. Compare the two coefficients
@@ -1527,10 +1596,10 @@ def _(
                 mo.callout(
                     mo.md(
                         "Spearman correlation remains high when order is preserved "
-                        "through a curved monotonic transformation. Creating ties "
-                        "shows why average ranks can be fractional. Ranking gains "
-                        "robustness to metric spacing but loses information about "
-                        "the sizes of differences."
+                        "even when the trend bends. Equal values share average ranks, "
+                        "which can be fractional. Ranking makes the calculation "
+                        "depend on order rather than the sizes of differences; "
+                        "it does not make every unusual observation harmless."
                     ),
                     kind="info",
                 ),
@@ -1545,18 +1614,34 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 5. Regression as a directional model
+    ## 5. Regression: predicting one measurement from another
 
-    Correlation treats $x$ and $y$ symmetrically. Regression instead defines a
-    response and models its conditional mean from one or more predictors. For simple
-    linear regression,
+    Correlation gives the same value whether we compare oxygen with flow speed or
+    flow speed with oxygen. Regression assigns different roles: oxygen is the
+    **response** we want to estimate, and flow speed is the **predictor** we use.
+    The line estimates average oxygen at a given flow speed. This average is also
+    called the **conditional mean**, because it refers to a specified predictor value.
+
+    **Simple linear regression** uses one predictor and a straight line:
 
     $$Y_i=\beta_0+\beta_1x_i+\varepsilon_i,\qquad
     \hat{y}_i=b_0+b_1x_i,\qquad e_i=y_i-\hat{y}_i.$$
 
-    Here oxygen concentration is the response and flow speed is the predictor. The
-    label “independent variable” does not establish experimental independence or
-    causality; those claims require the study design and biological reasoning.
+    The first equation describes the assumed relationship: $\beta_0$ is the
+    **intercept** (mean oxygen at zero flow speed), $\beta_1$ is the **slope**
+    (the difference in mean oxygen per unit of flow speed), and $\varepsilon_i$
+    represents variation around that mean. This variation can include biological
+    differences and measurement error.
+
+    The second equation is the line estimated from our data: $b_0$ and $b_1$ are
+    estimates of the two coefficients, and the hat in $\hat y_i$ marks a predicted
+    value. The **residual**, $e_i$, is observed minus predicted oxygen: positive
+    above the line and negative below it. A residual is an observable difference
+    from the fitted line; the underlying error $\varepsilon_i$ is unknown.
+
+    Predicting oxygen from flow does not show what would happen if we experimentally
+    changed flow. Calling a predictor an “independent variable” does not establish
+    either independence or causation.
 
     **Try this:** move the river-row slider and follow the highlighted diamond
     (observed oxygen) and square (fitted mean at the same flow speed). Their
@@ -1690,8 +1775,9 @@ def _(mo):
 
     ## 6. Least squares and regression coefficients
 
-    Least squares chooses the intercept and slope that minimize the sum of squared
-    residuals:
+    **Least squares** chooses the intercept and slope that give the smallest
+    **sum of squared residuals**, abbreviated **SSE**. For each river, square the
+    difference between observed and predicted oxygen, then add these values:
 
     $$SSE(b_0,b_1)=\sum_{i=1}^{n}(y_i-b_0-b_1x_i)^2.$$
 
@@ -1702,7 +1788,7 @@ def _(mo):
     **Try this:** begin with slope 0, a horizontal line, and move the intercept to
     reduce SSE. Then increase the slope and readjust the intercept. The vertical
     segments show the residuals whose squares are being added. In the right plot,
-    each contour joins parameter pairs with the same SSE; move the diamond towards
+    each contour line joins slope-and-intercept combinations with the same SSE; move the diamond towards
     the green star to approach the minimum. Select **Reveal least-squares solution**
     to overlay the fitted line and read its equation and minimum SSE below the plots.
     The derivation below can be expanded to see how that solution is calculated.
@@ -1861,7 +1947,7 @@ def _(
 
 @app.cell
 def _(mo):
-    least_squares_derivation = mo.accordion(
+    mo.accordion(
         {
             "Derivation: solving the normal equations": mo.md(r"""
             Differentiating $SSE$ with respect to $b_0$ and $b_1$ and setting both
@@ -1883,7 +1969,6 @@ def _(mo):
             """)
         }
     )
-    least_squares_derivation  # noqa: B018
 
 
 @app.cell
@@ -1891,19 +1976,28 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 7. Decomposing variation and interpreting $R^2$
+    ## 7. How much variation does the line account for? $R^2$
 
-    With an intercept, every total deviation can be split into a fitted and a
-    residual deviation:
+    Without using flow speed, we could predict the same average oxygen concentration
+    for every river. Does the fitted line improve on that simple prediction?
+    For each river, the difference from the overall mean splits into two parts:
+    the line's prediction minus the mean, and the observation minus the prediction:
 
     $$y_i-\bar y=(\hat y_i-\bar y)+(y_i-\hat y_i).$$
 
-    Least squares makes the cross-product vanish, giving
+    Squaring and adding across all rivers gives three totals: **SST** measures
+    differences from the overall mean, **SSR** measures how much the fitted values
+    differ from that mean, and **SSE** measures the remaining prediction errors.
+    For a least-squares line with an intercept, these totals satisfy
 
     $$SST=SSR+SSE,\qquad R^2=\frac{SSR}{SST}=1-\frac{SSE}{SST}.$$
 
-    $R^2$ is the proportion of observed response variation accounted for by this
-    fitted model. It does not identify a causal mechanism.
+    **$R^2$**, read “R-squared,” is the fraction of the original squared variation
+    accounted for by the fitted line. For example, $R^2=0.46$ means the line reduces
+    the sum of squared prediction errors by 46% compared with using the mean alone.
+    Here it ranges from 0 (no improvement) to 1 (every point lies on the line).
+    It describes this sample, not how accurately the model will predict new rivers,
+    and does not mean flow speed causes 46% of oxygen concentration.
 
     **Try this:** select different river rows and follow the green segment from
     the response mean to the fitted value, and the vermillion segment from the
@@ -2057,21 +2151,33 @@ def _(mo):
 
     ## 8. Uncertainty, prediction, and residual checks
 
-    A **confidence interval** at a selected predictor value concerns the unknown mean
-    response. A **prediction interval** concerns one future observation and must also
-    include observation-to-observation scatter, so it is wider.
+    At a selected flow speed, a **confidence interval** describes uncertainty about
+    the average oxygen concentration of rivers at that speed. A **prediction
+    interval** describes where one new river's oxygen measurement might fall.
+    It is wider because individual rivers vary around the average, even if that
+    average is estimated precisely. Drawing these intervals across flow speeds
+    produces the shaded **bands** below.
 
-    Regression calculations also rely on a model for the residuals. Diagnostic plots
-    can reveal curvature, changing variance, clusters, or influential observations.
-    They expose tension with the model; they do not mechanically prove assumptions.
+    The intervals shown assume a straight-line mean relationship, independent
+    errors, and a similar spread of errors at all flow speeds. Their small-sample
+    calculation also assumes normally distributed errors: a bell-shaped distribution
+    around zero. **Residual checks** use the observed prediction errors to look
+    for problems with these assumptions. A curve, a fan-shaped spread, separate
+    groups, or a point that strongly pulls the line can suggest a problem; a tidy
+    plot cannot prove that the assumptions hold.
+
+    Predictions outside the observed flow-speed range are **extrapolations**.
+    A narrow calculated interval does not protect against the biological relationship
+    changing beyond the range we measured.
 
     **Try the interval explorer:** move the flow-speed slider from 0.60 m/s towards
     either end of the observed range. The green vertical line marks the location
     read out in the tiles. Compare the narrow band for the mean with the wider band
     for a new observation, and notice how both widen away from the average flow
     speed. Increase the confidence level from 0.80 to 0.99: greater coverage needs
-    wider intervals, while the fitted mean stays unchanged. These are pointwise
-    intervals at each flow speed, not a simultaneous guarantee for the whole curve.
+    wider intervals, while the fitted mean stays unchanged. The confidence level
+    applies separately at each chosen flow speed; it is not the probability that
+    the entire true mean curve lies inside the band.
     """)
 
 
@@ -2205,6 +2311,9 @@ def _(mo):
     mo.md(r"""
     ### Read the residuals
 
+    **Variance** measures spread using squared differences from a mean. Here,
+    “constant variance” means a similar amount of scatter along the line.
+
     **Try this:** start with constant variance, then select **Curvature** and
     **Increasing variance**. For each dataset, first inspect the observations and
     fitted line on the left, then look for a curve or fan in the middle plot. The zero line represents a perfect prediction at an observation.
@@ -2216,7 +2325,8 @@ def _(mo):
     The middle plot shows where predictions miss: a curve suggests that a straight
     line misses a pattern; a fan suggests that the size of the misses changes.
 
-    The **Q–Q plot** on the right uses the same residuals (observed minus predicted
+    The **Q–Q plot** (quantile–quantile plot, comparing ordered positions in two
+    distributions) on the right uses the same residuals (observed minus predicted
     values), sorted from smallest to largest. It compares their shape with a
     normal, bell-shaped distribution. Points roughly along the reference line
     suggest a similar shape; bends or distant end points suggest differences.
@@ -2349,20 +2459,34 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 9. Confounding, residualization, and partial correlation
+    ## 9. Accounting for a third measurement: partial correlation
 
     Nitrate and phosphate concentrations are strongly correlated in the raw river
     data. Both also increase with distance from the river source. To describe their
-    remaining **linear** association after adjusting for distance, regress each
-    concentration on distance and correlate the two sets of residuals.
+    remaining straight-line association, first fit a line predicting each
+    concentration from distance. Then subtract each line's predictions from the
+    observed concentrations. This step is called **residualization**: it removes
+    the fitted trend with distance from each measurement.
 
-    This residual correlation equals the three-correlation formula
+    Correlating these two sets of residuals gives the **partial correlation**.
+    It asks whether rivers with more nitrate than expected at their distance also
+    tend to have more phosphate than expected at their distance. This is a form
+    of **statistical adjustment**: accounting for a measured third variable in a model.
+
+    The same result can be calculated from the three ordinary correlations below.
+    Here $x$ is nitrate, $y$ is phosphate, and $z$ is distance; $r_{xz}$, for example,
+    is the nitrate–distance correlation:
 
     $$r_{xy\cdot z}=\frac{r_{xy}-r_{xz}r_{yz}}
     {\sqrt{(1-r_{xz}^2)(1-r_{yz}^2)}}.$$
 
-    Calculation alone does not make distance a causal confounder. That label also
-    requires temporal and biological knowledge.
+    **Confounding** occurs when another factor influences both measurements and
+    mixes its effects into the relationship we are studying. For example, culture
+    conditions might affect both gene expression and growth, making their
+    association difficult to interpret causally. A change after adjustment does
+    not prove such an explanation: we also need knowledge of the biological
+    processes, their timing, and how the study was designed. Adjustment removes
+    only the pattern represented in the model, not every possible influence.
 
     **Try this:** first inspect the two concentration-versus-distance plots.
     Switch from **Raw nitrate–phosphate association** to **Adjusted for distance**.
@@ -2523,8 +2647,8 @@ def _(
                         f"The raw nitrate–phosphate correlation is "
                         f"**{nitrate_phosphate_r:.3f}**; after linear adjustment for "
                         f"distance it is **{river_partial_r:.3f}**. This change is "
-                        "consistent with shared linear structure involving distance, "
-                        "but it does not by itself establish a causal pathway."
+                        "consistent with both concentrations following a trend with distance, "
+                        "but does not establish why they vary together."
                     ),
                     kind="warn",
                 ),
@@ -2642,13 +2766,15 @@ def _(mo):
 
     The same modeling language extends beyond a straight line:
 
-    - **nonlinear regression** uses a nonlinear mean function, such as
-      Michaelis–Menten enzyme kinetics;
-    - **logistic regression** models the probability of a binary outcome through
-      log odds;
-    - **multiple regression** conditions a response on several predictors;
-    - **errors-in-variables models** are needed when predictor measurement error is
-      not negligible for the scientific goal.
+    - **Nonlinear regression** fits a curve, such as the rise towards a plateau
+      in Michaelis–Menten enzyme kinetics.
+    - **Logistic regression** estimates the probability of a yes/no outcome,
+      such as whether a culture grows at a given antibiotic concentration.
+    - **Multiple regression** uses several predictors together, such as substrate
+      concentration and temperature when estimating a response.
+    - **Errors-in-variables models** account for uncertainty in measured predictors.
+      They may be needed, for example, when concentration measurements are too
+      imprecise to treat as known values.
 
     ### Fit an enzyme-kinetics curve
 
@@ -2657,6 +2783,12 @@ def _(mo):
 
     $$\hat v(s)=\frac{V_{max}s}{K_m+s},\qquad
     SSE(V_{max},K_m)=\sum_i\left(v_i-\frac{V_{max}s_i}{K_m+s_i}\right)^2.$$
+
+    $V_{max}$ is the limiting rate approached at high substrate concentrations;
+    $K_m$ is the substrate concentration at which the predicted rate is half of
+    $V_{max}$. These are the model's two **parameters**, the quantities we estimate
+    from the data. The hat marks a predicted rate, and SSE again adds squared
+    differences between observed and predicted values.
 
     **Try this:** move $V_{max}$ while holding $K_m$ fixed, then move $K_m$ while
     holding $V_{max}$ fixed. The solid blue curve is your candidate model. Gray
@@ -2668,7 +2800,8 @@ def _(mo):
     The table reports both parameter pairs and their sums of squared deviations
     in $(\mathrm{µmol/min})^2$. The optimizer searches positive parameter values
     continuously, so the slider steps may prevent an exact match to its solution.
-    Equal weighting is used because all simulated rates have the same noise SD.
+    Each observation has equal weight in the fit because the random scatter added
+    to each simulated rate has the same standard deviation.
     """)
 
 
@@ -2849,7 +2982,7 @@ def _(
                 michaelis_comparison,
                 mo.callout(
                     mo.md(
-                        "$V_{max}$ is the asymptotic rate, while $K_m$ is the "
+                        "$V_{max}$ is the limiting rate at high substrate concentration, while $K_m$ is the "
                         "substrate concentration at half of $V_{max}$; dotted guides "
                         "mark your candidate values. "
                         f"Your candidate SSE is **{michaelis_candidate_sse:.4f}**, "
@@ -2908,7 +3041,7 @@ def _(review_feedback, review_question_1):
         correct_text="**Correct.** Identical numerical summaries can accompany linear, curved, clustered, or outlier-driven patterns.",
         incorrect_text={
             "coefficient_only": "The quartet has nearly identical r values despite very different point "
-            "patterns. A single linear-association coefficient cannot reveal curvature or "
+            "patterns. A single correlation value cannot reveal a curve or "
             "show that one point drives the fit.",
             "means_only": "Means locate the centers of the separate variables, but do not show how x and y "
             "are paired. The quartet also has nearly identical means; its scatter plots reveal "
@@ -2923,7 +3056,7 @@ def _(mo):
         {
             "Pearson correlation": "pearson",
             "Spearman rank correlation": "spearman",
-            "Neither coefficient can summarize monotonic order": "neither",
+            "Neither coefficient can summarize a consistently increasing trend": "neither",
         },
         value=None,
         label="Choose one answer",
@@ -2931,7 +3064,7 @@ def _(mo):
     mo.vstack(
         [
             mo.md(
-                "**2. Two ordinal scores tend to increase together, but the distances between score levels are not meaningful. Which coefficient naturally summarizes this monotonic association?**"
+                "**2. Two ordinal scores tend to increase together, but the distances between score levels are not meaningful. Which correlation measure best summarizes this increasing trend?**"
             ),
             review_question_2,
         ]
@@ -2944,12 +3077,12 @@ def _(review_feedback, review_question_2):
     review_feedback(
         review_question_2.value,
         correct_value="spearman",
-        correct_text="**Correct.** Spearman correlation uses ranks and measures monotonic association without requiring metric distances or a straight-line relationship.",
+        correct_text="**Correct.** Spearman correlation uses the order of the scores, without assuming equal gaps between score levels or a straight-line relationship.",
         incorrect_text={
             "pearson": "Pearson uses numerical distances between values and summarizes linear association. "
             "Arbitrary numerical codes for ordinal categories do not supply meaningful distances; "
             "Spearman uses their ordering instead.",
-            "neither": "Spearman is designed to summarize monotonic association through ranks, even when "
+            "neither": "Spearman uses ranks to summarize a consistently increasing or decreasing trend, even when "
             "numerical spacing is not meaningful. Tied categories receive average ranks.",
         },
     )
@@ -2959,7 +3092,7 @@ def _(review_feedback, review_question_2):
 def _(mo):
     review_question_3 = mo.ui.radio(
         {
-            "A confidence interval for the conditional mean": "mean_interval",
+            "A confidence interval for average oxygen at this flow speed": "mean_interval",
             "A prediction interval for a new observation": "prediction_interval",
             "The fitted value alone": "point_only",
         },
@@ -2982,9 +3115,9 @@ def _(review_feedback, review_question_3):
     review_feedback(
         review_question_3.value,
         correct_value="prediction_interval",
-        correct_text="**Correct.** A prediction interval includes uncertainty in the fitted mean and residual variation among individual observations.",
+        correct_text="**Correct.** A prediction interval includes uncertainty about average oxygen and the variation between individual rivers at that flow speed.",
         incorrect_text={
-            "mean_interval": "A confidence interval for the conditional mean addresses average oxygen at that "
+            "mean_interval": "A confidence interval for the mean addresses average oxygen at that "
             "flow speed. A new river also varies around that mean, so its prediction "
             "interval includes residual scatter.",
             "point_only": "The fitted value is a point prediction and expresses no uncertainty. A prediction "
@@ -3008,7 +3141,7 @@ def _(mo):
     mo.vstack(
         [
             mo.md(
-                "**4. What is a defensible interpretation of $R^2=0.46$ for oxygen regressed on flow speed?**"
+                "**4. What is a defensible interpretation of $R^2=0.46$ when predicting oxygen from flow speed?**"
             ),
             review_question_4,
         ]
@@ -3059,7 +3192,7 @@ def _(review_feedback, review_question_5):
     review_feedback(
         review_question_5.value,
         correct_value="conditional",
-        correct_text="**Correct.** Partial correlation measures the association between the residuals after linearly regressing each variable on distance. The smaller coefficient describes less remaining linear association; it does not establish a causal explanation.",
+        correct_text="**Correct.** Partial correlation compares what remains after subtracting each concentration’s fitted trend with distance. The smaller value means a weaker remaining straight-line relationship; it does not explain what causes the pattern.",
         incorrect_text={
             "proven": "The reduction shows that linear adjustment removes part of the shared pattern. It does "
             "not establish distance’s causal role; that requires knowledge of the processes and a "
@@ -3077,20 +3210,23 @@ def _(mo):
 
     ## 12. Summary and bridge
 
-    - Inspect the paired observations before compressing them into a coefficient.
-    - Covariance retains product units; Pearson correlation is standardized,
-      dimensionless, and specific to linear association.
-    - Spearman correlation replaces values with ranks and summarizes monotonic order.
-    - An observed correlation has sampling uncertainty. Fisher intervals use an
-      approximately normal transformed scale; bootstrap intervals must resample
-      complete paired rows.
-    - Regression defines a directional response model. Least squares minimizes SSE,
-      slopes retain scientific units, and residuals record model discrepancies.
-    - $R^2$ describes in-sample variation accounted for by a model, not causation.
-    - Confidence bands concern a conditional mean; prediction intervals concern a
-      future observation.
-    - Partial correlation describes remaining linear association after statistical
-      adjustment. Causal language requires study design and biological knowledge.
+    - Plot paired measurements before summarizing their relationship with a number.
+    - Covariance describes whether measurements tend to lie above or below their
+      means together. Pearson correlation removes the units and measures how
+      closely the points follow a straight-line pattern.
+    - Spearman correlation uses ranks: it describes a consistently increasing or
+      decreasing trend, including a curved one.
+    - Correlation estimates vary between samples. Confidence intervals express
+      uncertainty; a paired bootstrap must resample whole rows to keep pairs together.
+    - Regression predicts a response from one or more measurements. A slope gives
+      the predicted difference per unit of a predictor. Residuals are observed
+      minus predicted values; least squares minimizes their squared total, SSE.
+    - $R^2$ describes how much variation the fitted model accounts for in this sample.
+    - A confidence interval concerns the average response at a given predictor
+      value; a prediction interval concerns one new observation and is wider.
+    - Partial correlation describes the remaining straight-line relationship after
+      accounting for another measurement. Neither correlation nor regression alone
+      establishes cause and effect; study design and biological knowledge matter.
 
     **Next:** Chapter 4 introduces null models and p-values. Chapter 5 will use those
     ideas to test a correlation coefficient and to compare regression-based models.
