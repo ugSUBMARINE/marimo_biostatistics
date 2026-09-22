@@ -403,12 +403,11 @@ def _(mo):
 
     The dataset contains three types of values:
 
-    - **Measurements with meaningful numerical differences**, such as temperature
-      and oxygen concentration (often called *metric* variables).
-    - **Ordered, or ordinal, scores**, such as water quality from 1 to 20. A change
-      from 2 to 3 need not represent the same biological difference as 12 to 13.
-    - **Binary indicators**, with two possible values: for example, snail presence
-      is coded as 1 and absence as 0.
+    - **Numerical measurements** on the interval or ratio scales from Chapter 1,
+      such as temperature and oxygen concentration.
+    - **Ordinal scores**, such as water quality from 1 to 20, whose numerical
+      steps need not represent equal biological differences.
+    - **Binary categorical indicators**, such as snail presence (1) or absence (0).
 
     Pearson correlation summarizes straight-line relationships between measurements.
     Spearman correlation uses their order and is often more suitable for ordered scores.
@@ -476,8 +475,7 @@ def _(mo):
 
     Covariance has units of x-units × y-units, making its size hard to compare
     between different measurements. **Pearson correlation**, $r$, removes these
-    units by dividing by both standard deviations, $s_x$ and $s_y$ (measures of
-    how widely each variable is spread around its mean):
+    units by dividing by both sample standard deviations, $s_x$ and $s_y$:
 
     $$r=\frac{s_{xy}}{s_xs_y}.$$
 
@@ -1056,10 +1054,9 @@ def _(mo):
     **population correlation**, written $\rho$ (rho), is the correlation in the
     wider set of rivers we want to learn about. Our sample only estimates it.
 
-    A **95% confidence interval** expresses uncertainty in that estimate. If we
-    repeatedly sampled and calculated intervals in the same way, about 95% would
-    contain the population correlation, provided the method's assumptions hold.
-    It is not a range containing 95% of individual river measurements.
+    A **95% confidence interval** now targets $\rho$ rather than the mean from
+    Chapter 2. Its repeated-sampling interpretation is unchanged: about 95% of
+    intervals would contain the target when the method's assumptions hold.
 
     When $\rho$ is near $-1$ or $1$, sample correlations have less room to vary
     towards the nearby boundary, so their distribution can be uneven rather than
@@ -1076,14 +1073,13 @@ def _(mo):
     The formula assumes independent pairs and an approximately joint normal
     distribution: a roughly oval cloud without pronounced curves or outliers.
 
-    A **paired bootstrap** instead repeatedly draws whole rows from the observed
-    data **with replacement**: a row can be selected more than once, and some
-    rows may be omitted. Each new dataset has the original number of rows. Its
-    correlation helps estimate how much $r$ might vary between samples.
-    Both methods assume independent observations: one observation should not
-    provide information about another beyond the shared population pattern.
-    Repeated measurements from the
-    same river or culture cannot simply be treated as additional independent samples.
+    A **paired bootstrap** applies Chapter 2's resampling method to whole
+    $(x,y)$ rows, keeping each river's measurements together. Resample $n$ rows
+    with replacement and recalculate $r$; resampling the two columns separately
+    would destroy the relationship we want to estimate.
+    Both methods require independence **between rivers**, not between $x$ and $y$
+    within a river. Repeated readings from one river are not additional independent
+    rivers (Chapter 2, Section 1).
 
     **Try the sampling experiment:** choose $\rho=0.9$ and $n=10$, then click
     **Run a new simulation**. Each histogram summarizes correlations from many
@@ -1775,9 +1771,10 @@ def _(mo):
 
     ## 6. Least squares and regression coefficients
 
-    **Least squares** chooses the intercept and slope that give the smallest
-    **sum of squared residuals**, abbreviated **SSE**. For each river, square the
-    difference between observed and predicted oxygen, then add these values:
+    Chapter 1 used **least squares** to choose a single center. Here we choose
+    an intercept and slope to minimize the **sum of squared residuals (SSE)**.
+    For each river, square the difference between observed and predicted oxygen,
+    then add these values:
 
     $$SSE(b_0,b_1)=\sum_{i=1}^{n}(y_i-b_0-b_1x_i)^2.$$
 
@@ -2311,8 +2308,8 @@ def _(mo):
     mo.md(r"""
     ### Read the residuals
 
-    **Variance** measures spread using squared differences from a mean. Here,
-    “constant variance” means a similar amount of scatter along the line.
+    Here **constant variance** means a similar amount of scatter around the
+    line at every predictor value.
 
     **Try this:** start with constant variance, then select **Curvature** and
     **Increasing variance**. For each dataset, first inspect the observations and
@@ -2325,14 +2322,11 @@ def _(mo):
     The middle plot shows where predictions miss: a curve suggests that a straight
     line misses a pattern; a fan suggests that the size of the misses changes.
 
-    The **Q–Q plot** (quantile–quantile plot, comparing ordered positions in two
-    distributions) on the right uses the same residuals (observed minus predicted
-    values), sorted from smallest to largest. It compares their shape with a
-    normal, bell-shaped distribution. Points roughly along the reference line
-    suggest a similar shape; bends or distant end points suggest differences.
-    Some scatter is expected even with normally distributed errors. This is a
-    visual clue, not a pass/fail test. See **Chapter 5, Section 2: Assumptions and
-    graphical diagnostics** for the fuller explanation and more examples.
+    The **Q–Q plot** (quantile–quantile plot) on the right compares ordered
+    residuals with quantiles of a normal distribution. Points roughly along the
+    reference line suggest a similar shape; bends or distant end points suggest
+    departures. Some scatter is expected even under the model. Chapter 5,
+    Section 2 explores these patterns and how sample size affects their interpretation.
 
     The Q–Q plot does not show where along the fitted line a problem occurs, so
     read it together with the middle plot. Neither plot tells us whether one
@@ -3228,8 +3222,9 @@ def _(mo):
       accounting for another measurement. Neither correlation nor regression alone
       establishes cause and effect; study design and biological knowledge matter.
 
-    **Next:** Chapter 4 introduces null models and p-values. Chapter 5 will use those
-    ideas to test a correlation coefficient and to compare regression-based models.
+    **Next:** Chapter 4 introduces null models and p-values. Chapter 5 applies
+    them to correlation tests and group comparisons, including ANOVA. Chapter 6
+    returns to the flow–oxygen regression with Bayesian inference.
     """)
 
 

@@ -312,11 +312,9 @@ def _(mo):
 
     We begin with coin tosses because their probabilities are easy to calculate.
     For a fair coin, $H_0:p=0.5$, where $p$ is the probability of heads on each toss.
-    If the tosses are **independent**, knowing one outcome tells us nothing about
-    the others. The number of heads in $n$ independent tosses follows a
-    **binomial distribution**, which gives the probability of each possible count.
-    The same model can describe the number of positive cultures in independent
-    trials with the same probability of a positive result.
+    With independent tosses and a common heads probability, the count follows
+    the **binomial model** from Chapter 2, Section 3. Here that model supplies a
+    null distribution against which to assess the observed count.
 
     A **p-value** is the probability, assuming the null model is true, of obtaining
     the observed test statistic or a result more extreme in the direction(s) being
@@ -528,21 +526,17 @@ def _(mo):
     activity would answer your question, use a two-sided test even if you expect
     a decrease.
 
-    In the left-hand **density plot**, probability is represented by area under the
-    curve, not its height at a single point. The shaded tail area is the p-value.
-    The right-hand **cumulative distribution function (CDF)** gives the probability
-    of a value at or below a chosen point. We write this as $F(x)$: for example,
-    $F(2)$ is the area to the left of 2, and $1-F(2)$ is the area to its right.
+    Use the density and **cumulative distribution function (CDF)** from Chapter 2
+    to read the p-value: the left plot shades the relevant area; the right gives
+    $F(x)$, the probability at or below $x$. Thus $F(2)$ is the left-tail area
+    and $1-F(2)$ the right-tail area.
 
-    Start with the **standard normal distribution**, a bell-shaped curve with mean
-    zero and standard deviation one. The **t-distribution** has heavier tails:
-    values far from zero are more likely. Its shape depends on **degrees of
-    freedom (df)**, a measure of how much independent information remains for
-    estimating variation. For the one-sample t test below, $df=n-1$. Larger df
-    make the t curve closer to the normal curve. The explorer also includes
-    chi-squared ($\chi^2$) and F distributions used in later tests; these are
-    asymmetric, meaning their two sides have different shapes. The F distribution
-    has two df settings, one for each variation estimate being compared.
+    Compare the **standard normal** reference with the heavier-tailed
+    **t-distribution** from Chapter 2, Section 5. For a one-sample t test,
+    **degrees of freedom (df)** are $n-1$; larger df bring the t curve closer to
+    the normal curve. The explorer also previews the asymmetric chi-squared
+    ($\chi^2$) and F distributions used in Chapter 5. The F distribution has
+    two df settings, one for each variation estimate being compared.
 
     **Try this:** use the standard normal model and statistic 2.0. Compare
     **Upper tail**, **Lower tail**, and **Two-sided**; match the shaded area to
@@ -859,16 +853,15 @@ def _(mo):
     5. report the estimated effect, confidence interval, test result, and limitations.
 
     The **significance level**, $\alpha$, is the threshold used to make the decision.
-    This notebook calls a result **statistically significant** when $p\leq\alpha$,
+    This chapter calls a result **statistically significant** when $p\leq\alpha$,
     and we **reject $H_0$**. Otherwise, we **fail to reject $H_0$**: the data do not
     provide enough evidence against it with this test. This does not establish that
     $H_0$ is true. Section 5 explains how $\alpha$ relates to false alarms.
 
-    Independence depends on the experimental design. Three readings from the same
-    culture are **technical replicates**: they help assess measurement variation,
-    but do not replace three independently grown cultures (**biological replicates**).
-    A check for a bell-shaped distribution cannot establish independence. Choosing
-    the test direction or threshold after seeing the result can increase false alarms.
+    Use the independent biological units identified in Chapter 2, Section 1,
+    as the sample size; technical replicates do not increase that count.
+    Independence comes from the design, not a normality check. Choosing the test
+    direction or threshold after seeing the result can increase false alarms.
 
     ### Worked example: birth weight
 
@@ -878,19 +871,14 @@ def _(mo):
     mean, $\mu$ (“mu”) the population mean we want to learn about, and $\mu_0$ the
     value proposed by $H_0$. Here the estimated difference is $2200-3000=-800$ g.
 
-    **Standard deviation (SD)** describes variation between individual newborns.
-    **Standard error (SE)** describes how much the sample mean would vary across
-    repeated samples of the same size. For independent observations,
-    $SE=\mathrm{SD}/\sqrt n$, where $n$ is the number of observations.
-    The test statistic divides the mean difference by SE, expressing how far the
-    observed mean lies from the reference in standard-error units.
+    Apply Chapter 2's distinction: **SD** describes variation between newborns;
+    **SE** describes sampling uncertainty in their mean. The test statistic divides
+    the observed mean difference by its SE.
 
-    If the population SD, $\sigma$ (“sigma”), is known, use a **z test**. Usually
-    it is unknown and we estimate it using the sample SD, $s$, then use a **t test**.
-    Estimating SD adds uncertainty; the t-distribution accounts for this with its
-    heavier tails. It uses $n-1$ degrees of freedom: after estimating the sample
-    mean, only $n-1$ deviations from it can vary freely because they sum to zero.
-    For ten newborns, $df=9$.
+    With known population SD $\sigma$, use $SE=\sigma/\sqrt n$ and a **z test**.
+    With SD estimated by sample $s$, use the estimated SE $s/\sqrt n$ and a
+    **t test** with $df=n-1$ (here 9). These are the same two uncertainty models
+    used for the mean intervals in Chapter 2, Section 5.
 
     **Try this:** begin with the t test and move the observed mean towards the
     null mean. The difference in standard-error units approaches zero and the
@@ -924,15 +912,9 @@ def _(mo):
     gives a limit in just one direction; the other end is unbounded, so its total
     width is shown as infinite.
 
-    **Connecting the interval to the test:** zero means no difference from the
-    null mean. If the interval excludes zero, the p-value is below the selected
-    threshold and we reject the null hypothesis. If zero lies inside the interval,
-    away from its endpoints, the p-value is above the threshold and we do not
-    reject. For example, a two-sided 95% interval that excludes zero corresponds
-    to a two-sided p-value below 0.05. Section 4 explores this connection further.
-
-    At the exact boundary, when an interval endpoint is zero, the p-value equals
-    the threshold. This notebook counts equality as rejection.
+    **Connect the displays:** zero means no difference from the reference.
+    Compare its position relative to the interval with the test decision.
+    Section 4 explains the correspondence, including the exact boundary.
 
     These calculations assume independent observations. With small samples, the
     z and t tests used here require a normally distributed population for their
@@ -1231,13 +1213,10 @@ def _(mo):
 
     ## 4. Tests and confidence intervals
 
-    A **confidence interval** gives a range of population means compatible with
-    the data and model at the chosen confidence level. A narrower interval indicates
-    a more precise estimate. The 95% refers to the method: if we repeated the study
-    many times and calculated an interval each time, about 95% of those intervals
-    would contain the true population mean, provided the assumptions hold. It is
-    not a range containing 95% of individual newborns' weights, nor does it assign
-    a 95% probability to the true mean being inside this particular interval.
+    Chapter 2 introduced confidence intervals through repeated-sampling coverage.
+    Here we connect them to tests: which proposed population means are compatible
+    with the data at the matching threshold? This panel shows an interval for
+    $\mu$ itself, rather than for the difference $\mu-\mu_0$ shown above.
 
     For the same data and assumptions, a two-sided 95% t interval and a two-sided
     t test at $\alpha=0.05$ answer related questions. A null mean strictly outside

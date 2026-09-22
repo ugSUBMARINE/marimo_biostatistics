@@ -85,7 +85,8 @@ def _(mo):
     Whether you measure enzyme activity, count microbial colonies, or compare
     protein concentrations, a table of results can be difficult to interpret.
     **Descriptive statistics** are numbers and plots that summarize the data you have.
-    An **observation** is one recorded value; a **variable** is what you record,
+    An **observation unit** is the entity measured, such as a person or culture;
+    an **observation** records its measured values. A **variable** is what you record,
     such as height or enzyme activity. We will ask three questions:
 
     1. **What is a typical value?** — describe the center of the data
@@ -1118,7 +1119,8 @@ def _(mo):
 
     Here $X$ is a positive measurement, $\sim$ means “follows this distribution”,
     and $N(\mu,\sigma^2)$ denotes a normal distribution with mean $\mu$ (“mu”)
-    and standard deviation $\sigma$ (“sigma”) **on the logarithmic scale**.
+    and variance $\sigma^2$, so its standard deviation is $\sigma$ (“sigma”),
+    **on the logarithmic scale**.
 
     On the original scale, these data have a long right tail and may span several
     **orders of magnitude**. For an exactly log-normal
@@ -1135,11 +1137,10 @@ def _(mo):
     #### Explore multiplicative variation
 
     These curves describe a **theoretical population**: an idealized model of all
-    possible measurements, rather than a finite set of observations. Here $\log$
-    means the natural logarithm, and $X$ is a positive measurement in a fixed
-    reference unit.
+    possible measurements, rather than a finite set of observations. Express $X$
+    in a fixed reference unit before taking its logarithm.
 
-    **Try it:** hold μ fixed and increase σ. The geometric mean stays fixed while
+    **Try this:** hold μ fixed and increase σ. The geometric mean stays fixed while
     the arithmetic mean rises as the right tail grows. Then increase μ: both means
     are multiplied by the same factor. The axes rescale with the controls.
     """)
@@ -1488,7 +1489,9 @@ def _(mo):
 
     **Variance** describes spread by averaging the squared differences from the
     mean. For the displayed set of $n$ values, we divide by $n$. The **standard
-    deviation (SD)** is the square root of this variance:
+    deviation (SD)** is the square root of this variance. Here $\sigma$ describes
+    the displayed values as a complete finite population; in Chapter 2 it denotes
+    the SD of the wider population we want to estimate:
 
     \[
     \sigma^2=\frac{1}{n}\sum_{i=1}^{n}(x_i-\bar{x})^2,
@@ -2165,8 +2168,8 @@ def _(mo):
     - Cohen's $d$ expresses the difference between means relative to spread.
       Biological importance and uncertainty still need separate consideration.
 
-    **Next:** We will treat a dataset as a sample from a wider population and ask how
-    accurately its summaries estimate unknown population quantities.
+    **Next:** Chapter 2 treats a dataset as a sample from a wider population and
+    asks how precisely its summaries estimate unknown population quantities.
     """)
 
 

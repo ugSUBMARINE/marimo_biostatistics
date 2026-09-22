@@ -77,9 +77,9 @@ def _():
 @app.cell
 def _(mo):
     mo.md(r"""
-    Descriptive statistics summarize the measurements we have. **Inferential
-    statistics** uses those measurements to learn about a larger group or about
-    future repetitions of an experiment, while describing how uncertain our
+    Chapter 1 summarized the measurements we have. **Inferential statistics**
+    uses those measurements to learn about a larger group or future repetitions
+    of an experiment, while describing how uncertain our
     conclusions are. For example, how well does the mean enzyme activity in six
     independent cultures estimate the mean activity under those growth conditions?
 
@@ -1622,7 +1622,7 @@ def _(mo):
     is exact for independent normal observations with known population SD. For non-normal populations it uses
     a normal approximation; when SD must be estimated, a t interval has a random
     width and this z-based plan is only an approximation. This plans how precisely
-    we estimate a mean. It does not calculate **statistical power** (see chapter 4), the chance of
+    we estimate a mean. It does not calculate **statistical power** (see Chapter 4), the chance of
     detecting a specified effect with a statistical test. More observations also
     cannot correct biased sampling or make related measurements independent.
     """)
@@ -1849,7 +1849,8 @@ def _(mo):
 
     $$\bar x\pm z_{1-\alpha/2}\frac{\sigma}{\sqrt n}.$$
 
-    Here $\bar x$ is the observed sample mean. For 95% confidence, $\alpha=0.05$;
+    Here $\bar x$ is the observed sample mean and $1-\alpha$ is the confidence
+    level. For 95% confidence, $\alpha=0.05$;
     the subscript $1-\alpha/2=0.975$ selects a cutoff with 2.5% of the normal
     distribution above it. This gives $z\approx1.96$.
 
@@ -2460,7 +2461,7 @@ def _(mo):
     dependence; resampling must respect the independent biological units.
     Bootstrapping cannot recover parts of a population missing from the sample.
     It is useful when a direct SE formula is difficult, for example for a median
-    or the **interquartile range (IQR)**, the width of the middle 50% of values.
+    or the **interquartile range (IQR)** from Chapter 1.
     """)
 
 
@@ -2771,8 +2772,9 @@ def _(mo):
     means one tends to be high when the other is low. For example, a shared
     calibration error can move two measurements in the same direction.
     Independent inputs have zero covariance, but zero covariance alone does not
-    prove independence. **Correlation** expresses covariance on a scale from
-    $-1$ to $1$ by dividing it by the two input SDs.
+    prove independence. **Pearson correlation** expresses covariance on a scale
+    from $-1$ to $1$ by dividing it by the two input SDs. Chapter 3 develops these
+    measures using paired observations.
 
     The approximation works best when the calculation is nearly a straight line
     over the likely input range. Strong curvature can make it inaccurate.

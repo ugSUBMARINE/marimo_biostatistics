@@ -370,10 +370,9 @@ def _(comb, combinations, np, stats):
 @app.cell
 def _(mo):
     mo.md(r"""
-    Chapter 4 introduced the **null hypothesis**: a specific starting claim, such
-    as no difference between population means, against which we compare the data.
-    This chapter applies that logic to common biological designs while keeping the **estimated effect, uncertainty,
-    raw observations, and assumptions** beside every test result.
+    This chapter applies Chapter 4's testing framework to common biological
+    designs, keeping **estimated effects, uncertainty, raw observations, and
+    assumptions** beside every test result.
 
     By the end of the chapter, you should be able to:
 
@@ -389,10 +388,10 @@ def _(mo):
     > example, a change in enzyme activity? Plot the individual measurements, choose
     > a suitable test, and report the estimated effect and its uncertainty.
 
-    **Reminder from Chapters 2 and 4:** a **p-value** is the probability, assuming
-    the null hypothesis and the test's assumptions hold, of a test result at least
-    as extreme as the one observed. It is not the probability that the null
-    hypothesis is true or a measure of biological importance.
+    **Prerequisites:** sampling uncertainty and confidence intervals from Chapter 2;
+    correlation, ranks, and residuals from Chapter 3; null models, p-values, and
+    error rates from Chapter 4. For difference tests, we retain $p\leq\alpha$.
+    For interpretation pitfalls, revisit Chapter 4, Section 7.
     """)
 
 
@@ -420,21 +419,16 @@ def _(mo):
     With these small groups, approximately normal (bell-shaped) measurements
     within each group and the absence of extreme outliers matter.
 
-    In the displays below, **n** is the number of rats and **SD** (standard
-    deviation) describes the spread of individual measurements. **Variance** is
-    SD squared. The **pooled t-test** assumes equal population variances and
-    combines the two groups to estimate that shared variance. Diamonds in the
-    left plot show means with bars extending one SD above and below. The right
-    plot instead shows uncertainty about the *difference between population means*.
-    Its **95% confidence interval (CI)** comes from a method that would contain
-    the true difference in about 95% of repeated studies under the assumptions.
+    In the displays, **n** counts rats. Diamonds and ±1 **SD** bars show each
+    group's mean and individual spread; the **95% confidence interval (CI)** on
+    the right concerns the population mean difference. The **pooled t-test**
+    assumes equal population variances and estimates one shared variance.
 
-    The **t statistic** is the estimated difference divided by its **standard
-    error (SE)**, which describes how much that estimate would vary across repeated
-    samples. **Degrees of freedom (df)** determine the reference t-distribution;
-    Welch's calculation can give a non-integer value. **Cohen's d** expresses the
-    difference in units of the pooled SD. The difference in percentage points is
-    more directly interpretable for this experiment.
+    As in Chapter 4, the **t statistic** divides the estimated difference by its
+    **standard error (SE)**. Here the SE includes uncertainty from both groups;
+    Welch's **degrees of freedom (df)** can be non-integer. **Cohen's d** uses the
+    pooled SD from Chapter 1, Section 7, while the difference in percentage points
+    retains the experiment's measurement scale.
 
     **Start here:** search the table for each age group and compare the individual
     relaxation values before reading the summaries. Follow the same difference
@@ -624,8 +618,9 @@ def _(mo):
     ### Calculation details: two standard errors for the same mean difference
 
     Write $\bar x_1$ and $\bar x_2$ for the sample means, $s_1$ and $s_2$ for
-    their SDs, and $n_1$ and $n_2$ for their sample sizes. **Variance** is SD squared.
-    For independent samples, the Welch standard error is
+    their SDs, and $n_1$ and $n_2$ for their sample sizes (1 = old, 2 = young).
+    For independent samples, add the variances of the two means as in Chapter 2's
+    uncertainty propagation. The Welch standard error is
 
     $$SE_W=\sqrt{\frac{s_1^2}{n_1}+\frac{s_2^2}{n_2}},\qquad
     t_W=\frac{\bar x_2-\bar x_1}{SE_W}.$$
@@ -780,17 +775,16 @@ def _(mo):
 
     ## 2. Assumptions and graphical diagnostics
 
-    **Independent samples** provide separate pieces of information. Three assay
-    readings from one culture are technical repeats, not three independent cultures.
-    Shared animals, culture batches, or cages can also link measurements. Check how
-    samples were collected and treatments assigned; no plot can establish independence.
+    Check independence from the sampling and treatment design (Chapter 2,
+    Section 1). Shared animals, culture batches, or cages can link measurements;
+    no plot can establish independence.
 
-    A **Q–Q plot** compares ordered measurements with values expected from a normal
-    distribution. A quantile is a position in a distribution, such as its median
-    or 90th percentile. Points near a straight line suggest a roughly normal shape;
-    bends or isolated points suggest differences from that shape. Small samples
-    give limited information. With very large samples, a formal normality test can
-    detect tiny departures that have little practical effect on the analysis.
+    The normal **Q–Q plot** introduced for regression residuals in Chapter 3
+    also helps assess measurements within a group or within-pair differences.
+    It compares their ordered values with normal quantiles: a roughly straight
+    pattern supports a similar shape, while bends or isolated points suggest
+    departures. Small samples give limited information; very large samples can
+    make formal normality tests detect practically unimportant departures.
 
     **Try this:** select **Normal reference** with $n=20$, then compare
     **Right-skewed**, **Heavy-tailed**, **Bimodal mixture**, and **One extreme observation**. Match
@@ -914,10 +908,10 @@ def _(mo):
     5% target. Raise the small-group SD to 3 and rerun; then exchange the SDs
     so the larger group has SD 3. Compare the pooled and Welch results across
     these scenarios. Both populations have equal means throughout, so these
-    are false-positive rates. **Power** instead describes the probability of
-    detecting a difference when one really exists. Settings apply only after the button
-    click. More simulated studies make the estimated false-positive rates more
-    precise; they do not increase the number of observations in each study.
+    are false-positive rates, not power (Chapter 4, Section 5).
+    Settings apply only after the button click. More simulated studies make the
+    estimated false-positive rates more precise; they do not increase the number
+    of observations in each study.
     The error bars show uncertainty caused by running a finite number of simulations.
     """)
 
@@ -1382,10 +1376,10 @@ def _(mo):
 
     ## 4. Testing a correlation coefficient
 
-    **Pearson's correlation coefficient**, $r$, describes the direction and strength
-    of a straight-line association: it ranges from −1 to +1. Zero means no linear
-    association, although a curved relationship may still exist. Here we relate
-    nitrate and phosphate concentrations measured in the same river samples.
+    Chapter 3 described Pearson correlation and its uncertainty. Here we test
+    the raw nitrate–phosphate association from that chapter's river dataset,
+    without adjusting for distance from the source. The partial correlation in
+    Chapter 3, Section 9 answers a different, adjusted question.
 
     The test asks whether the population correlation, $\rho$, is zero. The usual
     test assumes independent pairs of measurements and a joint normal distribution
@@ -1723,9 +1717,9 @@ def _(mo):
 
     ## 6. Rank-based and permutation alternatives
 
-    A **rank** is an observation's position when values are sorted from smallest
-    to largest; tied values share the average of their positions. The
-    **Mann–Whitney test** ranks measurements from two independent groups together
+    As in Chapter 3's Spearman correlation, **ranks** keep order rather than
+    numerical distances, and ties receive average ranks. The **Mann–Whitney test**
+    ranks measurements from two independent groups together
     and asks whether one group tends to have higher ranks. Its usual null hypothesis
     is that the two population distributions are the same. Interpreting a result
     specifically as a difference in medians requires similarly shaped distributions
@@ -2025,7 +2019,9 @@ def _(
             $-M$ and below $+M$. Each test uses $\alpha=0.05$. Equivalence is supported
             when both tests reject their null hypotheses, which happens when the
             matching **90% CI** lies entirely inside those bounds. The 90% interval
-            corresponds to these two 5% one-sided tests.
+            corresponds to these two 5% one-sided tests. This explorer uses strict
+            bounds: touching a margin does not establish equivalence or non-inferiority
+            (the boundary p-value is 0.05).
 
             **Non-inferiority** asks only whether a new method is no worse than a
             reference by more than $M$. When larger values are better, the lower
@@ -2070,8 +2066,9 @@ def _(mo):
 
     Here $\mu$ is a baseline mean, $\alpha_j$ is the tissue's departure from that
     baseline, and $\varepsilon_{ij}$ is the remaining variation between measurements.
-    The model's prediction (**fitted value**) is the sample tissue mean. A
-    **residual** is an observation minus that predicted value.
+    The **fitted value** is the sample tissue mean; a **residual** is observed
+    minus fitted, just as in Chapter 3. ANOVA uses a separate mean for each group
+    where simple linear regression used a line.
 
     ANOVA asks whether the tissue means are far apart compared with the spread
     within tissues. Its **F statistic** is the ratio of these two sources of
@@ -2311,6 +2308,8 @@ def _(mo):
     +\underbrace{\sum_{j,i}(y_{ij}-\bar y_j)^2}_{SS_W}.$$
 
     Subscripts T, B, and W refer to total, between-group, and within-group variation.
+    This is the same partition as Chapter 3's $SST=SSR+SSE$: fitted group means
+    replace fitted points on a line, so $SS_B$ corresponds to $SSR$ and $SS_W$ to $SSE$.
     If $k$ is the number of groups and $N$ the total number of observations, the
     between-group df is $k-1$ and the within-group df is $N-k$. Divide each sum of
     squares by its degrees of freedom to obtain its mean square:
@@ -2467,8 +2466,8 @@ def _(mo):
     The overall ANOVA test (also called an **omnibus test**) asks whether all means
     are equal. To find which tissues differ, we compare individual pairs. Such
     follow-up comparisons are often called **post-hoc tests**. Three tissues give
-    three pairs; applying a separate 5% threshold to each increases the chance of
-    at least one false positive across the set.
+    three pairs. Chapter 4 demonstrated the extra false alarms from multiple
+    tests; here we account for them in the tissue comparisons.
 
     This set of comparisons is a **family**. The **family-wise error rate** is the
     probability of at least one false positive anywhere in that set. Choose the
@@ -3350,10 +3349,10 @@ def _(mo):
     - A small p-value alone does not show that an effect is large or biologically
       important. Consider its size, uncertainty, study quality, and how many tests were run.
 
-    **Next:** Chapter 6 introduces Bayesian analysis. It combines information
-    available before the analysis (a *prior*) with a model of how the data arise
-    (the *likelihood*) to obtain an updated distribution for the unknown quantity
-    (the *posterior*). Experimental design and biological interpretation remain essential.
+    **Next:** Chapter 6 introduces Bayesian inference: expressing uncertainty
+    about unknown quantities with probabilities conditional on a model, prior,
+    and observed data. We return to diagnostic tests and the river regression
+    to compare the questions answered by the two approaches.
     """)
 
 

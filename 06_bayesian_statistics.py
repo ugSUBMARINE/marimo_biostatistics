@@ -427,9 +427,9 @@ def _(mo):
 
     ## 1. Two interpretations of probability
 
-    A **parameter** is a number describing a population or process, such as the
-    fraction of people with an allergy. This fraction is called **prevalence**.
-    Its true value is unknown; a sample gives us information about it.
+    Our first unknown **parameter** is allergy **prevalence**, the population
+    fraction with an allergy. As in Chapter 2, a sample provides information
+    about a fixed but unknown population quantity.
 
     A **frequentist** analysis evaluates how a method would perform if we repeatedly
     collected new samples in the same way. A **Bayesian** analysis assigns
@@ -441,8 +441,9 @@ def _(mo):
     For the same observation—3 people with an allergy among 10—the intervals below
     may look similar while answering different questions.
 
-    A **95% confidence interval** comes from a method that includes the true
-    population fraction in at least 95% of repeated samples in this example.
+    A **95% confidence interval** retains Chapter 2's repeated-sampling meaning.
+    The exact binomial method used here has coverage of **at least** 95%, rather
+    than exactly 95%, because counts are discrete.
     A **95% credible interval** contains 95% of the Bayesian posterior probability
     for that fraction, given the prior, model, and observed sample.
 
@@ -588,7 +589,9 @@ def _(mo):
 
     ## 3. Diagnostic tests, prevalence, and the base-rate effect
 
-    Imagine screening a population for an infection. Here “sick” means the infection
+    Chapter 4 varied a diagnostic threshold to explore sensitivity and specificity.
+    Here we first hold test performance fixed and ask how prevalence changes the meaning
+    of a result. In this hypothetical infection screen, “sick” means the infection
     is present and “healthy” means it is absent; these labels do not describe a
     person's overall health. The symbols + and − mean positive and negative tests.
 
@@ -1150,11 +1153,11 @@ def _(mo):
     resistant isolates among independently sampled bacteria, or successful
     cultures among independent attempts under the same conditions.
 
-    A **binomial model** describes a count when each observation has two possible
-    outcomes, observations are independent, and each has the same probability $p$.
-    Here “success” simply means the outcome being counted, even if it is an allergy
-    or antibiotic resistance. Assume that allergy status is measured correctly;
-    unlike Section 3, this example does not model test errors.
+    Use Chapter 2's **binomial model**: $n$ independent binary observations with
+    a common probability $p$, counting allergy as “success.” In Chapter 4 we tested
+    a specified value of $p$; here we update uncertainty across its possible values.
+    Assume allergy status is measured correctly; this example does not model the
+    test errors from Section 3.
 
     A **beta distribution** describes uncertainty about a proportion between 0 and 1.
     Its two settings, $a$ and $b$, control its shape. The prior mean is $a/(a+b)$;
@@ -1162,7 +1165,7 @@ def _(mo):
     tightly around it. With $a=b=1$, the prior is flat: equal-length ranges of $p$
     have equal probability.
 
-    In mathematical notation, “$\sim$” means “has the distribution”:
+    We write the prior and observation model as:
 
     $$p\sim \operatorname{Beta}(a,b),\qquad K\mid p\sim \operatorname{Binomial}(n,p).$$
 
@@ -1384,10 +1387,9 @@ def _(mo):
     **Try this:** keep the prior and observed data in Section 5 fixed, then compare
     future sample sizes $m=1$, 20, and 100. At $m=1$ the two predictions coincide;
     for larger samples, compare the probabilities of unusually low or high counts.
-    The reported **variance** measures how spread out the predicted counts are;
-    a larger value means more spread. Both predict
-    **counts** of future successes, so changing $m$ also changes the horizontal
-    scale. This control updates immediately and does not add observations to the
+    Compare the reported **variances** as well as the tail probabilities.
+    Both predict **counts** of future successes, so changing $m$ also changes
+    the horizontal scale. This control updates immediately and does not add observations to the
     posterior. To see how more existing evidence changes prediction, hold $m=20$
     and compare $k/n=3/10$ with $30/100$ in Section 5.
     """)
@@ -1875,10 +1877,10 @@ def _(mo):
     $$\text{Oxygen}_i\sim N(\alpha+\beta_z z_i,\sigma^2),\qquad
       z_i=\frac{x_i-\bar x}{s_x}.$$
 
-    Here $i$ labels an observation and $N(\mu,\sigma^2)$ means a normal (bell-shaped)
-    distribution with mean $\mu$ and standard deviation $\sigma$.
-    **$\alpha$** is mean oxygen at average flow speed; **$\beta_z$** is the change
-    in mean oxygen for a one-standard-deviation increase in flow speed.
+    Here $i$ labels a river; as before, $N(\mu,\sigma^2)$ uses mean and variance.
+    **$\alpha$** is mean oxygen at average flow speed, not the significance level
+    from Chapters 4–5. **$\beta_z$** is the change in mean oxygen for a
+    one-standard-deviation increase in flow speed.
     **Residual SD $\sigma$** describes variation around the line that flow speed
     does not explain, including other environmental differences and measurement
     variation. We assume independent observations and the same residual SD at
@@ -1892,9 +1894,8 @@ def _(mo):
 
     These priors center average-flow oxygen at 7 mg/L and allow either a positive
     or negative slope. Modeling $\log\sigma$ (the natural logarithm of $\sigma$)
-    ensures that $\sigma$ stays positive, with a prior median of 2 mg/L.
-    The squared numbers in the normal distributions are variances; their square
-    roots are standard deviations.
+    gives $\sigma$ a **log-normal** prior, using the distribution introduced in
+    Chapter 1. It stays positive, with a prior median of 2 mg/L.
 
     Four chains use 8,000 draws each and discard the first 2,000 as warmup.
     Each Metropolis step now proposes values for all three unknown quantities.
@@ -1913,9 +1914,9 @@ def _(mo):
     settings; the Section 6 controls do not change it. First read the slope and its
     95% posterior interval in mg/L per m/s, then compare the uncertainty band for
     mean oxygen with the wider predictive band for an individual river observation.
-    The wider band includes variation among individual observations as well as
-    uncertainty about the average. The bands give 95% intervals at each flow speed;
-    they do not give a 95% probability for an entire curve to stay inside a band.
+    As in Chapter 3, predicting an individual adds variation around the mean;
+    here both bands use posterior probabilities. They give 95% intervals at each
+    flow speed, not a 95% probability for an entire curve to stay inside a band.
     In the **joint posterior** plot, each dot pairs an intercept and slope from
     the same draw. Its shape shows how uncertainty in these two quantities is linked.
 
