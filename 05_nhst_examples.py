@@ -370,26 +370,29 @@ def _(comb, combinations, np, stats):
 @app.cell
 def _(mo):
     mo.md(r"""
-    Chapter 4 developed the logic of a null model. This chapter applies that logic
-    to common biological designs while keeping the **estimated effect, uncertainty,
+    Chapter 4 introduced the **null hypothesis**: a specific starting claim, such
+    as no difference between population means, against which we compare the data.
+    This chapter applies that logic to common biological designs while keeping the **estimated effect, uncertainty,
     raw observations, and assumptions** beside every test result.
 
     By the end of the chapter, you should be able to:
 
-    1. distinguish independent, paired, correlation, count, and multi-group designs;
-    2. report a Welch mean comparison with its confidence interval and measurement units;
-    3. diagnose model assumptions without treating a preliminary test as a gatekeeper;
-    4. explain what rank and permutation procedures do—and do not—test;
-    5. decompose variation in one- and two-way ANOVA;
-    6. distinguish omnibus, post-hoc, interaction, equivalence, and multiplicity claims.
+    1. choose an analysis that matches the measurements and experimental design;
+    2. report a difference between means together with its units and uncertainty;
+    3. check whether a test's assumptions are reasonable;
+    4. explain tests that use the order of observations or shuffle group labels;
+    5. compare several groups and examine whether a treatment acts differently across tissues;
+    6. account for testing several questions and distinguish “no clear difference” from “similar enough.”
 
-    > **Two-minute preview:** Start from the observation unit and estimand. Plot the
-    > data, choose a model that respects the design, quantify the effect and its
-    > uncertainty, then interpret the p-value under that model. A different design
-    > often changes both the calculation and the scientific claim.
+    > **Start with the biology:** What is an independent sample—an animal, a culture,
+    > or a separately treated plant? What quantity do you want to estimate—for
+    > example, a change in enzyme activity? Plot the individual measurements, choose
+    > a suitable test, and report the estimated effect and its uncertainty.
 
-    **Prerequisites:** standard errors, confidence intervals, null distributions,
-    p-values, type-I error, and power from Chapters 2 and 4.
+    **Reminder from Chapters 2 and 4:** a **p-value** is the probability, assuming
+    the null hypothesis and the test's assumptions hold, of a test result at least
+    as extreme as the one observed. It is not the probability that the null
+    hypothesis is true or a measure of biological importance.
     """)
 
 
@@ -402,12 +405,36 @@ def _(mo):
 
     The rat dataset records maximum relaxation of urinary-bladder muscle strips
     during high-dose norepinephrine treatment. The independent units are rats; the
-    groups are old and young animals. We define the estimand in one direction:
+    groups are old and young animals. The quantity we want to estimate is the
+    difference between the population means ($\mu$), always in this direction:
 
     $$\Delta=\mu_{\mathrm{young}}-\mu_{\mathrm{old}},$$
 
     measured in **percentage points of maximum relaxation**. Positive values mean
-    greater average relaxation in young rats. Raw observations come before the test.
+    greater average relaxation in young rats. For example, a change from 20% to
+    30% is 10 percentage points. We first inspect the individual measurements.
+
+    **Welch's t-test** compares two independent population means while allowing
+    the groups to have different amounts of spread. Here the null hypothesis is
+    $\Delta=0$, and the two-sided test considers differences in either direction.
+    With these small groups, approximately normal (bell-shaped) measurements
+    within each group and the absence of extreme outliers matter.
+
+    In the displays below, **n** is the number of rats and **SD** (standard
+    deviation) describes the spread of individual measurements. **Variance** is
+    SD squared. The **pooled t-test** assumes equal population variances and
+    combines the two groups to estimate that shared variance. Diamonds in the
+    left plot show means with bars extending one SD above and below. The right
+    plot instead shows uncertainty about the *difference between population means*.
+    Its **95% confidence interval (CI)** comes from a method that would contain
+    the true difference in about 95% of repeated studies under the assumptions.
+
+    The **t statistic** is the estimated difference divided by its **standard
+    error (SE)**, which describes how much that estimate would vary across repeated
+    samples. **Degrees of freedom (df)** determine the reference t-distribution;
+    Welch's calculation can give a non-integer value. **Cohen's d** expresses the
+    difference in units of the pooled SD. The difference in percentage points is
+    more directly interpretable for this experiment.
 
     **Start here:** search the table for each age group and compare the individual
     relaxation values before reading the summaries. Follow the same difference
@@ -594,8 +621,10 @@ def _(
 @app.cell
 def _(mo):
     independent_derivation = mo.md(r"""
-    ### Derivation: two standard errors for the same estimand
+    ### Calculation details: two standard errors for the same mean difference
 
+    Write $\bar x_1$ and $\bar x_2$ for the sample means, $s_1$ and $s_2$ for
+    their SDs, and $n_1$ and $n_2$ for their sample sizes. **Variance** is SD squared.
     For independent samples, the Welch standard error is
 
     $$SE_W=\sqrt{\frac{s_1^2}{n_1}+\frac{s_2^2}{n_2}},\qquad
@@ -612,8 +641,9 @@ def _(mo):
     $$s_p^2=\frac{(n_1-1)s_1^2+(n_2-1)s_2^2}{n_1+n_2-2}$$
 
     and use $SE_p=s_p\sqrt{1/n_1+1/n_2}$ with $n_1+n_2-2$ degrees of freedom.
-    The pooled derivation is useful, but a variance pre-test does not justify choosing
-    it after looking at the data. Welch's test is the safer general default.
+    This **pooled t-test** combines both groups to estimate one shared variance.
+    A preliminary test that fails to detect unequal variances does not establish
+    that they are equal. Welch's test is a useful default for independent means.
     """)
     mo.accordion(
         {
@@ -625,14 +655,24 @@ def _(mo):
 @app.cell
 def _(mo):
     mo.md(r"""
-    ### Randomization under the null
+    ### Shuffling group labels: a permutation test
 
-    Under the sharp label-exchangeability null, the 17 observed values can be split
-    into groups of 8 and 9 in $\binom{17}{8}=24{,}310$ distinct ways. The exact
-    permutation distribution asks where the observed mean difference falls among
-    those assignments. Unlike a bootstrap, it shuffles labels **without replacement**
-    to model a null hypothesis rather than resampling observations to estimate
-    sampling uncertainty.
+    Suppose the old and young rats' measurements came from the same population
+    distribution. Under this null hypothesis, the age labels would carry no
+    information about relaxation: we could exchange them without changing the
+    probability model. This assumption is called **exchangeability**. Equal means
+    alone are not enough; different group spreads can invalidate this simple shuffle.
+
+    We can split the 17 measurements into groups of 8 and 9 in
+    $\binom{17}{8}=24{,}310$ ways. For each split, we calculate young minus old.
+    The **permutation p-value** is the fraction of splits whose mean difference is
+    at least as far from zero as the observed difference, in either direction.
+    “Exact” means we use every possible split rather than a random selection.
+
+    Each shuffle uses every measurement once. A **bootstrap**, by comparison,
+    samples observations with replacement (so some appear more than once) to
+    estimate uncertainty. Here age was not randomly assigned, so shuffling labels
+    does not turn the study into a randomized experiment.
     """)
 
 
@@ -720,8 +760,9 @@ def _(
         mo.md(
             f"Exactly **{rat_extreme_count} of {rat_permutation_distribution.size:,}** "
             f"assignments are at least as extreme as the observed absolute mean "
-            f"difference, giving $p={rat_permutation_p:.6f}$. Exchangeability must "
-            "be justified by the design; shuffling cannot repair confounding."
+            f"difference, giving $p={rat_permutation_p:.6f}$. Shuffling cannot remove "
+            "confounding: other differences between the age groups, such as housing "
+            "or health, could also contribute to the observed association."
         ),
         kind="warn",
     )
@@ -739,19 +780,25 @@ def _(mo):
 
     ## 2. Assumptions and graphical diagnostics
 
-    Independence is primarily a property of how animals, samples, or experimental
-    units were selected and assigned. A Q–Q plot can reveal distributional patterns,
-    but it cannot diagnose independence. At small sample sizes it has little detail;
-    at very large sizes, formal normality tests can flag scientifically trivial
-    deviations. Inspect the data and the model discrepancy directly.
+    **Independent samples** provide separate pieces of information. Three assay
+    readings from one culture are technical repeats, not three independent cultures.
+    Shared animals, culture batches, or cages can also link measurements. Check how
+    samples were collected and treatments assigned; no plot can establish independence.
+
+    A **Q–Q plot** compares ordered measurements with values expected from a normal
+    distribution. A quantile is a position in a distribution, such as its median
+    or 90th percentile. Points near a straight line suggest a roughly normal shape;
+    bends or isolated points suggest differences from that shape. Small samples
+    give limited information. With very large samples, a formal normality test can
+    detect tiny departures that have little practical effect on the analysis.
 
     **Try this:** select **Normal reference** with $n=20$, then compare
     **Right-skewed**, **Heavy-tailed**, **Bimodal mixture**, and **One extreme observation**. Match
     the histogram features to bends or isolated points in the Q–Q plot. Repeat
     at $n=8$ and $n=200$: a small sample can hide departures and also look
     irregular by chance. Controls update immediately with reproducible simulated
-    examples. Points close to the Q–Q line support approximate distributional
-    agreement; they do not establish independence.
+    examples. **Right-skewed** means a long tail towards high values; **heavy-tailed**
+    means more extreme values than a normal distribution; **bimodal** means two peaks.
     """)
 
 
@@ -837,9 +884,9 @@ def _(
 
     qq_messages = {
         "normal": "Random normal samples do not lie perfectly on a line. Small irregularities are expected.",
-        "skewed": "Systematic curvature reflects asymmetric tails rather than one isolated point.",
-        "heavy": "Both ends depart from the line because the sample has heavier tails than a normal model.",
-        "bimodal": "A Q–Q plot compresses clustering; inspect the raw distribution beside it.",
+        "skewed": "A bend across many points suggests a long tail on one side of the distribution.",
+        "heavy": "This model produces more extreme values than a normal distribution; look for departures at either end of the line.",
+        "bimodal": "Two clusters can be easier to see in the histogram than in the Q–Q plot.",
         "outlier": "One extreme point can influence a mean, variance, fitted model, and test statistic.",
     }
     qq_note = mo.callout(mo.md(qq_messages[qq_pattern.value]), kind="info")
@@ -855,19 +902,23 @@ def _(mo):
     mo.md(r"""
     ### Interactive laboratory: variance and sample-size imbalance
 
-    Both simulated groups have population mean zero, so every rejection is a type-I
-    error. Change which group is small and variable, then rerun the studies. The
-    pooled test can become liberal or conservative when unequal variances align with
-    unequal sample sizes; Welch's standard error adapts to both sample variances.
+    Both simulated populations have mean zero. Any test that declares a difference
+    therefore makes a **false positive**, also called a **type-I error**. The chosen
+    threshold, $\alpha=0.05$, aims for a 5% false-positive rate when the assumptions hold.
+    The pooled t-test assumes equal population variances. When group spreads and
+    sample sizes differ, it can produce too many or too few false positives.
+    Welch's test allows the groups to have different variances.
 
     **Try this:** keep group sizes at 8 and 40, set both SDs to 1, and click
     **Run / resimulate studies**. Compare the rejection rates with the nominal
-    5% reference. Raise the small-group SD to 3 and rerun; then exchange the SDs
+    5% target. Raise the small-group SD to 3 and rerun; then exchange the SDs
     so the larger group has SD 3. Compare the pooled and Welch results across
     these scenarios. Both populations have equal means throughout, so these
-    are false-positive rates, not power. Settings apply only after the button
-    click. More simulated studies reduce Monte Carlo uncertainty but do not
-    increase the sample size within either group.
+    are false-positive rates. **Power** instead describes the probability of
+    detecting a difference when one really exists. Settings apply only after the button
+    click. More simulated studies make the estimated false-positive rates more
+    precise; they do not increase the number of observations in each study.
+    The error bars show uncertainty caused by running a finite number of simulations.
     """)
 
 
@@ -1016,7 +1067,7 @@ def _(
             f"{1.96 * stress_result['welch_mcse']:.1%}** and the pooled test in "
             f"**{stress_result['pooled_rate']:.1%} ± "
             f"{1.96 * stress_result['pooled_mcse']:.1%}** (approximate 95% Monte "
-            "Carlo margins)."
+            "Carlo margins: uncertainty from the finite number of simulated studies)."
         ),
         kind="warn",
     )
@@ -1050,15 +1101,22 @@ def _(mo):
 
     ## 3. Paired measurements
 
-    Pairing records two measurements from the same independent unit: before and
-    after treatment, matched samples, twins, or paired technical conditions. The
-    paired t-test is simply a one-sample t-test of
+    **Paired measurements** are linked by the design: for example, enzyme activity
+    in the same independently grown culture before and after induction. Pairs can
+    also be deliberately matched units, such as treated and control samples from
+    the same donor. The paired t-test calculates one difference for each pair:
 
     $$D_i=\text{after}_i-\text{before}_i$$
 
-    against a null mean difference of zero. Its sample size is the number of
-    independent **pairs**, not twice that number. Pairing can remove stable
-    between-unit variation—but only when identities are preserved.
+    It then tests whether the population mean difference is zero. Its sample size
+    is the number of independent **pairs**, not the total number of readings.
+    For small samples, the *differences* should be approximately normal; the before
+    and after measurements need not each be normal. Technical repeats from one
+    culture do not increase the number of independent pairs.
+
+    Comparing each unit with itself removes stable differences between units.
+    The example below uses synthetic enzyme activities from 12 subjects, expressed
+    in arbitrary units (**a.u.**), a relative measurement scale.
 
     **Try this:** start with **Preserve subject identities** and follow each
     line connecting a subject's before and after measurements. Inspect the
@@ -1292,7 +1350,7 @@ def _(mo):
     )
     mo.vstack(
         [
-            mo.md("### Checkpoint: when is pairing part of the estimand?"),
+            mo.md("### Checkpoint: when does the design justify pairing?"),
             paired_checkpoint,
         ]
     )
@@ -1311,8 +1369,8 @@ def _(paired_checkpoint, review_feedback):
             "analysis when the design supports independence.",
             "design": "Sharing a plate can create a batch effect, but it does not define which treated well "
             "is paired with which control well. A paired comparison needs a scientifically "
-            "specified unit-level match; plate effects may instead require blocking or a "
-            "hierarchical model.",
+            "specified match between samples; a different model may be needed to account "
+            "for measurements that share a plate.",
         },
     )
 
@@ -1324,9 +1382,15 @@ def _(mo):
 
     ## 4. Testing a correlation coefficient
 
-    Chapter 3 showed why a scatter plot and interval must accompany Pearson's
-    correlation. Under a bivariate-normal linear model, the null hypothesis
-    $H_0:\rho=0$ can be tested with
+    **Pearson's correlation coefficient**, $r$, describes the direction and strength
+    of a straight-line association: it ranges from −1 to +1. Zero means no linear
+    association, although a curved relationship may still exist. Here we relate
+    nitrate and phosphate concentrations measured in the same river samples.
+
+    The test asks whether the population correlation, $\rho$, is zero. The usual
+    test assumes independent pairs of measurements and a joint normal distribution
+    (a roughly elliptical cloud of points, without strong outliers). Under this
+    model, calculate
 
     $$t=r\sqrt{\frac{n-2}{1-r^2}},\qquad df=n-2.$$
 
@@ -1335,8 +1399,10 @@ def _(mo):
 
     **Try this:** change the explorer correlation from its observed-data default
     to 0.30 and compare $n=10$,
-    24, and 100. Follow the test statistic, interval, and p-value as information
-    increases for the same association strength. Then change $r$ from 0.30 to
+    24, and 100. Follow the test statistic and p-value as sample size
+    increases for the same association strength. The table's approximate 95%
+    confidence interval uses Fisher's transformation and belongs to the observed
+    river data; it does not change with the controls. Then change $r$ from 0.30 to
     −0.30: a two-sided test keeps the same p-value while the direction reverses.
     These controls update a hypothetical calculation immediately; they do not
     alter the observed nitrate–phosphate scatter plot or its reference analysis.
@@ -1502,7 +1568,8 @@ def _(
         mo.md(
             f"Explorer: $r={explorer_r:.2f}$ and $n={explorer_n}$ imply "
             f"$t={explorer_t:.2f}$ and $p={explorer_p:.4g}$. The river result is "
-            "an association; sampling design, measurement, nonlinear structure, and confounding still govern its scientific interpretation."
+            "an association. Shared nutrient sources could raise both concentrations; "
+            "this result alone does not show that one nutrient causes the other to increase."
         ),
         kind="warn",
     )
@@ -1520,14 +1587,24 @@ def _(mo):
 
     ## 5. Counts, expected frequencies, and the chi-squared test
 
-    Mendel observed four pea phenotypes in counts $315,108,101,32$. A dihybrid
-    segregation model predicts proportions $9:3:3:1$. Expected **counts** are the
-    total count multiplied by those proportions. Each category contributes
+    Mendel observed four pea phenotypes in counts $315,108,101,32$. For a cross
+    between two double heterozygotes, independent assortment and complete dominance
+    predict the ratio $9:3:3:1$. The null hypothesis specifies these proportions.
+    **Expected counts** are the total number of peas multiplied by $9/16$, $3/16$,
+    $3/16$, and $1/16$. For example, the expected round-yellow count is
+    $556\times9/16=312.75$; an expectation need not be a whole number.
+
+    The **chi-squared goodness-of-fit test** measures how far the observed counts
+    depart from those predictions. If $O_i$ is the observed count and $E_i$ the
+    expected count in category $i$, that category contributes
 
     $$\frac{(O_i-E_i)^2}{E_i}$$
 
-    to the goodness-of-fit statistic. With four fixed category probabilities and no
-    fitted parameters, $df=4-1=3$.
+    to the total $\chi^2$ statistic. Larger totals mean greater disagreement with
+    the predicted proportions. With the total count fixed, knowing three category
+    counts determines the fourth, giving $df=4-1=3$. This calculation assumes
+    independent observations, each counted in exactly one category, and proportions
+    specified before examining these counts.
     """)
 
 
@@ -1620,13 +1697,15 @@ def _(
 
     expected_count_note = (
         "All expected counts exceed five, so the usual chi-squared approximation is reasonable here."
-        " For datasets with small expected counts, consider an exact or simulation-based calibration."
+        " With small expected counts, calculate the p-value from exact count probabilities "
+        "or by simulating counts under the null model."
     )
     mendel_note = mo.callout(
         mo.md(
             rf"$\chi^2(3)={mendel_result.statistic:.3f}$, "
             f"$p={mendel_result.pvalue:.3f}$. {expected_count_note} Percentages alone "
-            "cannot replace counts because the sampling variability depends on the total sample size."
+            "cannot replace counts because uncertainty depends on sample size. "
+            "The large p-value gives no evidence against the 9:3:3:1 model here; it does not prove the model true."
         ),
         kind="info",
     )
@@ -1644,11 +1723,21 @@ def _(mo):
 
     ## 6. Rank-based and permutation alternatives
 
-    Mann–Whitney compares the relative ordering of independent observations;
-    Wilcoxon signed-rank uses within-pair differences. Their null hypotheses are not
-    automatically “equal means,” and neither is assumption-free. A label-permutation
-    test targets a chosen statistic under exchangeability. These methods complement,
-    rather than mechanically replace, a mean comparison.
+    A **rank** is an observation's position when values are sorted from smallest
+    to largest; tied values share the average of their positions. The
+    **Mann–Whitney test** ranks measurements from two independent groups together
+    and asks whether one group tends to have higher ranks. Its usual null hypothesis
+    is that the two population distributions are the same. Interpreting a result
+    specifically as a difference in medians requires similarly shaped distributions
+    that differ only by a shift.
+
+    For paired data, the **Wilcoxon signed-rank test** ranks the absolute within-pair
+    differences and retains their positive or negative signs. Its usual null model
+    has differences distributed symmetrically around zero, with independent pairs.
+    Neither rank test is assumption-free, and neither directly tests equal means.
+    The label-permutation test below uses the mean difference and the exchangeability
+    assumption explained in Section 1. Choose among these methods by the scientific
+    question and design, not by which gives the smallest p-value.
 
     **Try this:** move the largest young-rat observation from 65.5 towards 100
     and then 150. The upper end is deliberately unrealistic for a percentage,
@@ -1774,7 +1863,7 @@ def _(
     rank_design_feedback = review_feedback(
         rank_design.value,
         correct_value="mann_whitney",
-        correct_text="**Correct.** Mann–Whitney ranks unit-level measurements from two independent groups. It compares relative ordering; interpreting it solely as a location or median shift requires additional distributional assumptions.",
+        correct_text="**Correct.** Mann–Whitney compares ranks from two independent groups. To interpret it specifically as a median difference, the population distributions should have the same shape and differ only by a shift.",
         incorrect_text={
             "wilcoxon": "Before and after measurements on the same animals are paired, so an independent-group Mann–Whitney analysis would ignore their link. Wilcoxon signed-rank works on within-animal differences and, for a location interpretation, assumes their distribution is symmetric.",
             "invalid": "Two group averages do not provide the individual observations needed to construct and compare ranks. Percentage-valued measurements can be ranked if they are recorded for independent units; the problem here is missing unit-level data, not the percentage scale itself.",
@@ -1785,8 +1874,9 @@ def _(
         mo.md(
             f"The modified young-group mean difference is "
             f"**{rank_observed_difference:+.2f} percentage points**. Moving one "
-            "already-largest observation changes metric distances but barely changes "
-            "its rank. That robustness comes with a different target of inference."
+            "already-largest observation changes its distance from other values but leaves "
+            "all ranks unchanged. Mann–Whitney therefore stays unchanged, but it answers "
+            "a question about ordering rather than the mean difference."
         ),
         kind="warn",
     )
@@ -1925,11 +2015,22 @@ def _(
     equivalence_content = mo.vstack(
         [
             mo.md(r"""
-            A non-significant difference test does not demonstrate similarity.
-            Equivalence uses two one-sided tests (TOST) against pre-specified lower
-            and upper margins. At $\alpha=0.05$, both tests reject exactly when the
-            matching 90% confidence interval lies entirely inside the equivalence
-            region. Non-inferiority needs only the relevant one-sided bound.
+            A non-significant result can reflect imprecise measurements, so it does
+            not demonstrate similarity. **Equivalence** asks whether a difference
+            is small enough to be scientifically unimportant. For example, when
+            comparing enzyme assays, decide in advance the largest acceptable
+            difference, $M$, in the measurement's units.
+
+            **Two one-sided tests (TOST)** ask whether the true difference is above
+            $-M$ and below $+M$. Each test uses $\alpha=0.05$. Equivalence is supported
+            when both tests reject their null hypotheses, which happens when the
+            matching **90% CI** lies entirely inside those bounds. The 90% interval
+            corresponds to these two 5% one-sided tests.
+
+            **Non-inferiority** asks only whether a new method is no worse than a
+            reference by more than $M$. When larger values are better, the lower
+            confidence bound must exceed $-M$. This is the same lower bound as in
+            a one-sided 95% interval. The explorer uses a normal approximation.
 
             **Try this:** hold the margin at ±2 and the estimate at 0.2, then
             increase the SE from 0.6 to 1.5. The interval widens beyond the
@@ -1955,16 +2056,32 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 7. One-way ANOVA as a linear model
+    ## 7. Comparing several means: one-way ANOVA
 
-    A one-way ANOVA asks whether at least one population mean differs across levels
-    of one categorical factor. For observation $i$ in tissue group $j$,
+    **Analysis of variance (ANOVA)** compares population means by comparing sources
+    of variation. “One-way” means that groups are defined by one **factor**, a
+    variable with named categories called **levels**. Here the factor is tissue,
+    with levels root, mesocotyl, and primary leaf. The null hypothesis is that all
+    three population means are equal.
+
+    The model writes measurement $i$ in tissue group $j$ as
 
     $$Y_{ij}=\mu+\alpha_j+\varepsilon_{ij}.$$
 
-    The fitted value is the group mean and the residual is the observation minus
-    that mean. ANOVA compares between-group variation with residual variation; an
-    omnibus result does not say that every pair of means differs.
+    Here $\mu$ is a baseline mean, $\alpha_j$ is the tissue's departure from that
+    baseline, and $\varepsilon_{ij}$ is the remaining variation between measurements.
+    The model's prediction (**fitted value**) is the sample tissue mean. A
+    **residual** is an observation minus that predicted value.
+
+    ANOVA asks whether the tissue means are far apart compared with the spread
+    within tissues. Its **F statistic** is the ratio of these two sources of
+    variation after accounting for their degrees of freedom. A small p-value
+    supports a difference somewhere among the means; it does not identify which
+    tissues differ.
+
+    **Reading the table:** SS means *sum of squares*: add the squared deviations
+    from the relevant mean. MS means *mean square*: SS divided by df. The grand
+    mean is the mean of all measurements in the selected illumination condition.
 
     **Explore the table:** page through the measurements and identify the two
     illumination conditions and three tissues. Then compare **Light-grown**
@@ -2000,12 +2117,16 @@ def _(mo, peroxidase_data, two_column_panel):
         [
             mo.callout(
                 mo.md(
-                    "**Course dataset:** peroxidase amount was measured in root, mesocotyl, and primary-leaf tissue under light and dark conditions. Each of the six cells contains 10 observations."
+                    "**Course dataset:** peroxidase amount was measured in root, mesocotyl, and primary-leaf tissue under light and dark conditions. Each of the six tissue–illumination combinations contains 10 observations. Amounts are displayed in arbitrary units (a.u.)."
                 ),
                 kind="info",
             ),
             mo.md(
-                "One-way ANOVA uses one illumination condition at a time; two-way ANOVA later uses the full balanced design."
+                "One-way ANOVA uses one illumination condition at a time. Two-way ANOVA later "
+                "uses all six combinations, with equal sample sizes (a balanced design). "
+                "These analyses assume independent observations. If several tissues came "
+                "from the same seedling, the analysis would need to account for that link; "
+                "the table has no seedling identifiers to check this."
             ),
         ]
     )
@@ -2189,7 +2310,10 @@ def _(mo):
     =\underbrace{\sum_j n_j(\bar y_j-\bar y)^2}_{SS_B}
     +\underbrace{\sum_{j,i}(y_{ij}-\bar y_j)^2}_{SS_W}.$$
 
-    Divide each sum of squares by its degrees of freedom:
+    Subscripts T, B, and W refer to total, between-group, and within-group variation.
+    If $k$ is the number of groups and $N$ the total number of observations, the
+    between-group df is $k-1$ and the within-group df is $N-k$. Divide each sum of
+    squares by its degrees of freedom to obtain its mean square:
 
     $$F=\frac{MS_B}{MS_W}
     =\frac{SS_B/(k-1)}{SS_W/(N-k)}.$$
@@ -2207,11 +2331,16 @@ def _(mo):
     mo.md(r"""
     ### ANOVA assumptions and residual diagnostics
 
-    The model assumes independent experimental units, approximately normal
-    residuals within groups, and a common residual variance. Independence comes from
-    the design. Residual plots can expose skew, outliers, and variance patterns, but
-    small datasets cannot certify that assumptions are true. Alternatives answer
-    related—not always identical—questions.
+    Classical ANOVA assumes independent experimental units, approximately normal
+    variation around each population group mean, and similar spread in all groups.
+    Check the residuals for strong asymmetry, extreme values, or a larger spread
+    around some tissue means than others. The Q–Q plot compares their shape with
+    a normal distribution. Small datasets cannot establish that assumptions hold.
+
+    **Welch ANOVA** still compares means but allows unequal group variances.
+    **Kruskal–Wallis** compares ranks across groups; it does not generally test the
+    same question as a mean comparison. The table illustrates these alternatives,
+    rather than offering several chances to obtain a small p-value.
     """)
 
 
@@ -2315,7 +2444,9 @@ def _(
     diagnostic_note = mo.callout(
         mo.md(
             f"Displayed groups: **{', '.join(tissue_order)}**. Do not select a "
-            "procedure solely because a preliminary normality or variance test crossed 0.05; use design, estimand, balance, diagnostics, and sensitivity analysis together."
+            "test solely because a preliminary normality or variance test crossed 0.05. "
+            "Consider the experimental design, the quantity you want to compare, "
+            "group sizes, plots, and whether reasonable alternative analyses change the conclusion."
         ),
         kind="warn",
     )
@@ -2333,11 +2464,24 @@ def _(mo):
 
     ## 8. Multiple comparisons and post-hoc procedures
 
-    A significant omnibus ANOVA says that not all means are equal. It does not
-    identify the differing pairs. Testing many pairs at unadjusted $\alpha$ inflates
-    the chance of at least one false positive. Bonferroni and Holm control the
-    family-wise error rate; Tukey's procedure is designed for all pairwise mean
-    comparisons under the ANOVA model.
+    The overall ANOVA test (also called an **omnibus test**) asks whether all means
+    are equal. To find which tissues differ, we compare individual pairs. Such
+    follow-up comparisons are often called **post-hoc tests**. Three tissues give
+    three pairs; applying a separate 5% threshold to each increases the chance of
+    at least one false positive across the set.
+
+    This set of comparisons is a **family**. The **family-wise error rate** is the
+    probability of at least one false positive anywhere in that set. Choose the
+    set before examining results. **Bonferroni** multiplies each raw p-value by the
+    number of tests (capped at 1). **Holm** adjusts the p-values in order from
+    smallest to largest and is generally less conservative. Both can keep the
+    family-wise error rate at or below 5%, provided the individual tests are valid.
+
+    **Tukey's procedure** is designed for all pairs of means under the equal-variance
+    ANOVA model. Its 95% intervals cover all the true pairwise differences together
+    in 95% of repeated studies under that model. An interval excluding zero supports
+    a difference for that pair. Here Bonferroni and Holm adjust separate pooled
+    t-tests, while Tukey uses the within-group variance from all three tissues.
     """)
 
 
@@ -2481,9 +2625,12 @@ def _(mo):
     ### Explore the chance of at least one false positive
 
     **Try this:** set the per-test threshold to 0.05 and compare 1, 20, and
-    100 independent true-null tests. Read the probability of at least one false
-    rejection, $1-(1-\alpha)^m$, rather than interpreting it as the fraction of
-    tests expected to reject. Then lower the per-test threshold to 0.01.
+    100 independent tests for which every null hypothesis is true. For example,
+    imagine measuring many proteins whose population means are unchanged.
+    With $m$ tests and false-positive probability $\alpha$ per test,
+    $1-(1-\alpha)^m$ is the chance of **at least one** false positive across the set.
+    It is not the fraction of tests expected to be positive. Then lower the
+    per-test threshold to 0.01.
     Both controls update the theoretical calculation immediately. This example
     assumes independent tests and does not change the tissue comparisons above;
     those comparisons need their stated multiple-testing procedure.
@@ -2570,7 +2717,11 @@ def _(
             f"$\\alpha={multiplicity_alpha_value:.2f}$, the illustrative chance of "
             f"at least one false positive is **{multiplicity_fwer:.1%}**. "
             "Bonferroni and Holm control the probability of any false positive. "
-            "Benjamini–Hochberg instead controls the expected false-discovery proportion among rejections, often a more useful goal in omics."
+            "In omics, Benjamini–Hochberg instead aims to control the average proportion "
+            "of false positives among the results declared significant (the false "
+            "discovery rate). Its usual guarantee assumes independent tests or certain "
+            "forms of positive dependence; it does not guarantee a fixed false-positive "
+            "fraction in any one experiment."
         ),
         kind="warn",
     )
@@ -2588,15 +2739,25 @@ def _(mo):
 
     ## 9. Two-way ANOVA and interactions
 
-    The full peroxidase design has two factors: illumination and tissue. A two-way
-    model decomposes each observation into a grand mean, an illumination effect, a
-    tissue effect, their interaction, and a residual:
+    The full peroxidase design has two factors: illumination and tissue. **Two-way
+    ANOVA** examines both together. Its model adds a baseline mean ($\mu$), an
+    illumination contribution ($\alpha_i$), a tissue contribution ($\beta_j$), an
+    interaction contribution ($(\alpha\beta)_{ij}$), and remaining variation
+    ($\varepsilon_{ijk}$) for observation $k$ in each combination:
 
     $$Y_{ijk}=\mu+\alpha_i+\beta_j+(\alpha\beta)_{ij}+\varepsilon_{ijk}.$$
 
-    An interaction means that the illumination effect depends on tissue. Inspect
-    cell means and profiles before reducing the result to isolated main-effect
-    p-values.
+    An **interaction** means that the light–dark mean difference depends on tissue.
+    A **main effect** summarizes one factor by averaging over the other—for example,
+    the light–dark difference averaged over all tissues. This average can hide a
+    strong response in leaves and a weak response in roots.
+
+    Each tissue–illumination combination is sometimes called a **cell** of the
+    design (not a biological cell). The lines connect these combination means to
+    form **profiles**. Non-parallel profiles show different sample light–dark
+    differences; the interaction test assesses the evidence against a constant
+    population difference. The model assumes independent observations, approximately
+    normal variation within each combination, and a common variance.
     """)
 
 
@@ -2872,7 +3033,8 @@ def _(
             f"With the residuals held fixed, the selected profile gives interaction "
             f"$F={pattern_interaction['F']:.3f}$ and "
             f"$p={pattern_interaction['p-value']:.3g}$. Parallel lines encode no "
-            "interaction; non-parallel lines show that one factor's effect depends on the other."
+            "interaction in the chosen means. Non-parallel sample lines alone do not "
+            "establish a population interaction; the test also accounts for within-group spread."
         ),
         kind="info",
     )
@@ -2890,16 +3052,17 @@ def _(mo):
 
     ## 10. End-of-chapter method map
 
-    A method follows from the scientific question, observation unit, outcome type,
-    group structure, pairing, and estimand—not from a desire to obtain a particular
-    p-value. This map is a starting point for an analysis plan, not a substitute for
-    design knowledge and model checking.
+    Choose a method from the biological question: what was sampled or treated
+    independently, what was measured, and which quantity should be compared?
+    Check whether groups are separate or linked by pairing. The table is a starting
+    point; the experimental design and the test's assumptions still need checking.
 
     **Try this:** choose a scenario and name the observation unit, outcome type,
-    and estimand before reading the explanation. Compare different animals on
-    two diets with the same cultures measured twice. The pairing changes which
+    and quantity to estimate before reading the explanation. Compare different
+    animals on two diets with the same cultures measured twice. The pairing changes which
     variation supplies the standard error, even though both questions involve
-    two sets of measurements. Then compare the count and factorial scenarios.
+    two sets of measurements. Then compare phenotype counts with a study of two
+    factors together.
     The selector reveals an analysis-plan suggestion immediately; it does not
     run a new test or decide whether the study design is valid.
     """)
@@ -2965,8 +3128,8 @@ def _(compact_table, method_scenario, mo, pd, two_column_panel):
     method_answers = {
         "independent": "Observation unit: animal. Estimate a diet mean difference; plot raw groups; report Welch t and a CI.",
         "paired": "Observation unit: culture. Analyze within-culture differences; preserve complete pairs in plots and resampling.",
-        "counts": "Use observed counts and expected counts from the genetic model; check whether asymptotic calibration is adequate.",
-        "factorial": "Fit both factors and their interaction; inspect the six cell distributions and interaction profiles before main effects.",
+        "counts": "Compare observed counts with those predicted by the genetic model. If expected counts are small, use exact probabilities or simulations rather than the usual chi-squared approximation.",
+        "factorial": "Include tissue, illumination, and their interaction. Plot the six groups and compare light–dark differences within each tissue before interpreting averages over tissues.",
     }
     method_panel = mo.vstack(
         [
@@ -3065,11 +3228,11 @@ def _(
                 review_feedback(
                     review_two_group.value,
                     correct_value="estimate",
-                    correct_text="**Correct.** State the direction (young minus old), estimate, units, and uncertainty. The 95% Welch interval concerns a population mean difference and has approximately 95% repeated-sampling coverage under its assumptions; it does not describe individual rats.",
+                    correct_text="**Correct.** State the direction (young minus old), estimate, units, and uncertainty. The 95% Welch interval concerns a population mean difference and comes from a method that would include the true difference in about 95% of repeated studies under its assumptions. It does not describe individual rats.",
                     incorrect_text={
-                        "posterior": "The Welch interval is frequentist: its repeated-sampling procedure has "
-                        "approximately 95% coverage under its assumptions. A 95% posterior probability would "
-                        "require a Bayesian analysis with a stated prior.",
+                        "posterior": "The 95% describes the method: across repeated studies, about 95% of its intervals "
+                        "would contain the true difference if the assumptions hold. It does not assign a "
+                        "95% probability to the true difference being inside this particular interval.",
                         "individual": "The interval concerns a population mean difference, not all pairwise differences "
                         "between individual rats. Groups can overlap substantially even when the confidence "
                         "interval for their mean difference excludes zero.",
@@ -3086,7 +3249,7 @@ def _(
                     correct_value="design",
                     correct_text="**Correct.** Independence is justified by the observation units, sampling, allocation, and data-generating process.",
                     incorrect_text={
-                        "plot_proves": "A Q–Q plot assesses marginal distributional shape, not whether one observation "
+                        "plot_proves": "A Q–Q plot assesses the shape of a distribution, not whether one observation "
                         "depends on another. Measurements can look normal while sharing an animal, cage, "
                         "or batch.",
                         "normality_gate": "Failure to reject normality is not proof of normality, especially in a small "
@@ -3126,13 +3289,13 @@ def _(
                 review_feedback(
                     review_anova.value,
                     correct_value="omnibus",
-                    correct_text="**Correct.** The omnibus evidence is against equality of all tissue means; post-hoc comparisons locate supported differences.",
+                    correct_text="**Correct.** The overall test supports a difference somewhere among the tissue means. Adjusted follow-up comparisons show which pairs have evidence of a difference.",
                     incorrect_text={
-                        "all_pairs": "The omnibus test provides evidence against all means being equal; it does not show "
-                        "that every pair differs. Use the multiplicity-adjusted comparisons to identify "
+                        "all_pairs": "The overall test provides evidence against all means being equal; it does not show "
+                        "that every pair differs. Use comparisons adjusted for testing several pairs to identify "
                         "which differences are supported.",
-                        "null_probability": "The p-value is a tail probability for F under equal population means and the "
-                        "ANOVA assumptions. It does not assign a probability to that null hypothesis.",
+                        "null_probability": "The p-value is the probability of an F statistic at least this large if all population "
+                        "means are equal and the ANOVA assumptions hold. It does not assign a probability to that null hypothesis.",
                     },
                 ),
             ]
@@ -3140,7 +3303,7 @@ def _(
         mo.vstack(
             [
                 mo.md(
-                    "**5. In the observed peroxidase data, what does the tissue × illumination interaction describe on the additive mean-response scale?**"
+                    "**5. In the observed peroxidase data, what does the tissue × illumination interaction describe for mean peroxidase amounts?**"
                 ),
                 review_interaction,
                 review_feedback(
@@ -3169,24 +3332,28 @@ def _(mo):
 
     ## 12. Summary and bridge
 
-    - Define the observation unit, estimand, design, and direction before choosing a test.
+    - Identify the independent sample, the quantity to estimate, and the direction
+      of the comparison before choosing a test.
     - Welch's test is the general default for two independent means; report the mean
       difference, its units, confidence interval, statistic, degrees of freedom, and p-value.
     - A paired t-test is a one-sample test on complete within-unit differences.
     - Correlation testing does not replace the scatter plot, interval, or assessment of confounding.
-    - Chi-squared calculations use counts and expected counts; small expected counts
-      may require exact or simulation-based calibration.
-    - Rank and permutation procedures have assumptions and estimands of their own.
-    - One-way ANOVA compares between-group with residual variation. Its omnibus result
-      requires multiplicity-aware post-hoc analysis to support pairwise claims.
-    - In factorial designs, interpret cell means and interactions before isolated main effects.
+    - Chi-squared tests compare observed and expected counts. Small expected counts
+      may require p-values calculated from exact probabilities or simulations.
+    - Rank tests compare ordering; permutation tests shuffle labels under a stated
+      null model. Both need assumptions justified by the design.
+    - One-way ANOVA compares differences among group means with spread within groups.
+      To identify differing pairs, use comparisons that account for multiple testing.
+    - When studying two factors, examine whether one factor's effect depends on the
+      other before interpreting effects averaged over groups.
     - Failure to reject a difference does not establish equivalence; equivalence needs a pre-specified margin and matching procedure.
-    - Statistical significance, effect magnitude, uncertainty, scientific relevance,
-      study quality, and multiplicity remain separate considerations.
+    - A small p-value alone does not show that an effect is large or biologically
+      important. Consider its size, uncertainty, study quality, and how many tests were run.
 
-    **Next:** Chapter 6 changes the inferential language by combining prior
-    information with a likelihood to form a posterior distribution. The design,
-    model checking, effect scale, and scientific interpretation developed here remain essential.
+    **Next:** Chapter 6 introduces Bayesian analysis. It combines information
+    available before the analysis (a *prior*) with a model of how the data arise
+    (the *likelihood*) to obtain an updated distribution for the unknown quantity
+    (the *posterior*). Experimental design and biological interpretation remain essential.
     """)
 
 
