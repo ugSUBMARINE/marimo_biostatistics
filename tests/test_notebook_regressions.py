@@ -592,6 +592,36 @@ class NotebookRegressionTests(unittest.TestCase):
                     else np.all(changes > 0)
                 )
 
+    def test_nhst_posterior_matches_expected_study_counts(self):
+        helpers = run_cell(6, "diagnostic_details")
+        for prior, power, alpha, true_positive, false_positive in (
+            (50, 80, 0.05, 400, 25),
+            (10, 80, 0.05, 80, 45),
+            (1, 80, 0.05, 8, 49.5),
+            (99, 99, 0.001, 980.1, 0.01),
+            (1, 10, 0.10, 1, 99),
+        ):
+            with self.subTest(prior=prior, power=power, alpha=alpha):
+                result = run_cell(
+                    6,
+                    "nhst_result",
+                    **helpers,
+                    nhst_prior=control(prior),
+                    nhst_power=control(power),
+                    nhst_alpha=control(alpha),
+                )
+                counts = result["nhst_result"]
+                self.assertAlmostEqual(counts["true_positive"], true_positive)
+                self.assertAlmostEqual(counts["false_positive"], false_positive)
+                self.assertAlmostEqual(
+                    counts["ppv"], true_positive / (true_positive + false_positive)
+                )
+                curve = result["nhst_posterior_curve"]
+                self.assertEqual(curve[0], 0)
+                self.assertEqual(curve[-1], 1)
+                self.assertTrue(np.all(np.diff(curve) >= 0))
+                self.assertAlmostEqual(curve[2 * prior], counts["ppv"])
+
     def test_dice_reveal_disabled_for_student_rolls(self):
         for source in ("lecture", "student"):
             result = run_cell(6, "dice_reveal", dice_sequence_source=control(source))

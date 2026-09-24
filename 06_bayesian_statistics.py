@@ -486,7 +486,7 @@ def _(compact_table, mo, pd, stats):
                     "For the Bayesian interval, we initially give equal probability to "
                     "equal-length ranges of $p$ between 0 and 1. This is a uniform "
                     "$\\operatorname{Beta}(1,1)$ prior; the data update it to "
-                    "$\\operatorname{Beta}(4,8)$, explained in Section 5. The confidence "
+                    "$\\operatorname{Beta}(4,8)$, explained in Section 6. The confidence "
                     "interval method used here includes the true fraction in at least "
                     "95% of repeated samples. This percentage is called its **coverage**. "
                     "Similar endpoints do not make the two interpretations interchangeable."
@@ -808,7 +808,201 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 4. Sequential updating with dice
+    ## 4. What does a significant test tell us?
+
+    A null-hypothesis significance test (NHST) can be treated like the diagnostic
+    test above. The two possibilities are $H_0$ (no effect) and $H_1$ (an effect
+    under a specified alternative model). A “positive” result is now the event
+    $S=\{p\leq\alpha\}$: the test rejects $H_0$ at a threshold chosen in advance.
+
+    | Diagnostic test | Hypothesis test |
+    | :--- | :--- |
+    | Disease prevalence | Prior probability $\pi=P(H_1)$ |
+    | Sensitivity | Power $P(S\mid H_1)=1-\beta$ |
+    | False-positive rate, $1-\text{specificity}$ | $P(S\mid H_0)=\alpha$ |
+    | Positive predictive value | $P(H_1\mid S)$ |
+
+    Bayes' theorem gives
+
+    $$P(H_1\mid S)=\frac{\pi(1-\beta)}{\pi(1-\beta)+(1-\pi)\alpha},
+    \qquad
+    P(H_0\mid S)=\frac{(1-\pi)\alpha}{\pi(1-\beta)+(1-\pi)\alpha}.$$
+
+    With a 50% prior probability, 80% power, and $\alpha=0.05$, imagine 1,000
+    studies: 400 of the 500 studies with an effect and 25 of the 500 without an
+    effect yield significance. Among the 425 significant results, the expected
+    fraction with an effect is $400/425=94.1\%$. The remaining **5.9%** is the
+    posterior probability of $H_0$ under these assumptions.
+
+    **Try this:** lower the prior probability to 10%, then 1%, keeping power at
+    80% and $\alpha$ at 5%. Predict whether true or false positives will dominate.
+    The table shows expected counts, which can be fractional; the curve shows
+    how the posterior changes with the prior at the selected power and threshold.
+
+    This example follows the post-test probability calculation in
+    [GraphPad QuickCalcs](https://www.graphpad.com/quickcalcs/interpretpvalue1/).
+    """)
+
+
+@app.cell
+def _(mo):
+    nhst_prior = mo.ui.slider(
+        1,
+        99,
+        value=50,
+        step=1,
+        show_value=True,
+        full_width=True,
+        label="Prior probability of H₁ [%]",
+    )
+    nhst_power = mo.ui.slider(
+        10,
+        99,
+        value=80,
+        step=1,
+        show_value=True,
+        full_width=True,
+        label="Assumed power [%]",
+    )
+    nhst_alpha = mo.ui.dropdown(
+        {"0.001": 0.001, "0.01": 0.01, "0.05": 0.05, "0.10": 0.10},
+        value="0.05",
+        full_width=True,
+        label="Significance threshold α",
+    )
+    return nhst_alpha, nhst_power, nhst_prior
+
+
+@app.cell
+def _(
+    COLORS,
+    FIGURE_SIZE_STANDARD,
+    compact_table,
+    diagnostic_details,
+    mo,
+    nhst_alpha,
+    nhst_power,
+    nhst_prior,
+    np,
+    pd,
+    plt,
+    two_column_panel,
+):
+    nhst_result = diagnostic_details(
+        nhst_prior.value / 100, nhst_power.value / 100, 1 - nhst_alpha.value, 1000
+    )
+    nhst_table = compact_table(
+        pd.DataFrame(
+            {
+                "Result": ["Significant", "Not significant", "Total"],
+                "H₁ true": [
+                    nhst_result["true_positive"],
+                    nhst_result["false_negative"],
+                    nhst_result["sick"],
+                ],
+                "H₀ true": [
+                    nhst_result["false_positive"],
+                    nhst_result["true_negative"],
+                    nhst_result["healthy"],
+                ],
+            }
+        ),
+        column_widths={"Result": 140, "H₁ true": 100, "H₀ true": 100},
+        format_mapping={"H₁ true": "{:,.1f}", "H₀ true": "{:,.1f}"},
+    )
+    nhst_prior_grid = np.linspace(0, 1, 201)
+    nhst_posterior_curve = (
+        nhst_prior_grid
+        * nhst_power.value
+        / 100
+        / (
+            nhst_prior_grid * nhst_power.value / 100
+            + (1 - nhst_prior_grid) * nhst_alpha.value
+        )
+    )
+    nhst_figure, nhst_axis = plt.subplots(figsize=FIGURE_SIZE_STANDARD)
+    nhst_axis.plot(
+        nhst_prior_grid * 100,
+        nhst_posterior_curve * 100,
+        color=COLORS["blue"],
+        label="After significance",
+    )
+    nhst_axis.plot(
+        [0, 100], [0, 100], linestyle=":", color=COLORS["gray"], label="Prior unchanged"
+    )
+    nhst_axis.scatter(
+        [nhst_prior.value],
+        [nhst_result["ppv"] * 100],
+        color=COLORS["vermillion"],
+        zorder=3,
+    )
+    nhst_axis.set(
+        xlabel="Prior probability of H₁ [%]",
+        ylabel="P(H₁ | significant) [%]",
+        xlim=(0, 100),
+        ylim=(0, 100),
+    )
+    nhst_axis.legend(frameon=False, fontsize=8)
+    nhst_axis.grid(linestyle=":", alpha=0.3)
+    nhst_figure.tight_layout()
+    two_column_panel(
+        mo.vstack(
+            [
+                nhst_prior,
+                nhst_power,
+                nhst_alpha,
+                mo.stat(
+                    f"{nhst_result['ppv']:.1%}",
+                    label="P(H₁ | significant)",
+                    bordered=True,
+                ),
+                mo.stat(
+                    f"{1 - nhst_result['ppv']:.1%}",
+                    label="P(H₀ | significant)",
+                    bordered=True,
+                ),
+            ]
+        ),
+        mo.vstack(
+            [mo.md("**Expected counts among 1,000 studies**"), nhst_table, nhst_figure]
+        ),
+        widths=(1, 2.2),
+    )
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    **What this calculation assumes.** The prior assigns probabilities to the
+    two competing hypotheses before observing the current data. Power depends
+    on effect size, sample size, variability, and the test. For a composite $H_1$,
+    use power averaged over an explicit prior distribution of alternative effect
+    sizes. The controls explore assumed operating characteristics: changing
+    $\alpha$ in an actual fixed study also changes its power.
+
+    Here $P(S\mid H_0)=\alpha$ assumes a correctly calibrated test. A conservative
+    or discrete test may have a smaller actual false-positive rate. Unaccounted
+    multiple testing, optional stopping, or selective reporting can invalidate
+    the assumed rates or require a model of selection.
+
+    **What the posterior means.** We have conditioned only on significance.
+    Results with $p=0.049$ and $p=0.00001$ receive the same update here at
+    $\alpha=0.05$. Neither the observed p-value nor $\alpha$ is $P(H_0\mid S)$.
+    A Bayesian analysis using the full data needs likelihoods and priors under
+    both hypotheses and can distinguish those results. Do not substitute the
+    observed p-value for $\alpha$ while leaving power unchanged.
+
+    Likewise, a non-significant result does not establish $H_0$: its posterior
+    depends on the prior and on how often the test misses effects under $H_1$.
+    """)
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ---
+
+    ## 5. Sequential updating with dice
 
     Suppose one hidden die was selected from dice with 4, 6, 8, 12, or 20 sides.
     Each die is a **hypothesis**, or possible explanation of the rolls. We assume
@@ -1146,7 +1340,7 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 5. Bayesian inference for a proportion
+    ## 6. Bayesian inference for a proportion
 
     Let $p$ be the fraction of a population with an allergy. We observe $k$ people
     with the allergy in a sample of $n$. The same calculation could describe
@@ -1384,14 +1578,14 @@ def _(mo):
     as known. This shortcut is called a **plug-in prediction**. It includes chance
     variation in the new sample but leaves out uncertainty about $p$.
 
-    **Try this:** keep the prior and observed data in Section 5 fixed, then compare
+    **Try this:** keep the prior and observed data in Section 6 fixed, then compare
     future sample sizes $m=1$, 20, and 100. At $m=1$ the two predictions coincide;
     for larger samples, compare the probabilities of unusually low or high counts.
     Compare the reported **variances** as well as the tail probabilities.
     Both predict **counts** of future successes, so changing $m$ also changes
     the horizontal scale. This control updates immediately and does not add observations to the
     posterior. To see how more existing evidence changes prediction, hold $m=20$
-    and compare $k/n=3/10$ with $30/100$ in Section 5.
+    and compare $k/n=3/10$ with $30/100$ in Section 6.
     """)
 
 
@@ -1501,7 +1695,7 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 6. Posterior computation with MCMC
+    ## 7. Posterior computation with MCMC
 
     For the allergy example, we can calculate the posterior exactly. More complex
     models often need a computer approximation. **Markov chain Monte Carlo (MCMC)**
@@ -1544,7 +1738,7 @@ def _(mo):
     The ESS and R-hat calculations here are simplified teaching diagnostics. Use
     them together with the plots, rather than treating one number as a pass/fail test.
 
-    **How to run:** choose the prior and observed data in Section 5, select a
+    **How to run:** choose the prior and observed data in Section 6, select a
     proposal standard deviation (SD, the scale of attempted moves) and draws per
     chain here, then click **Run four
     new chains**. Until you click, the plots and diagnostics retain the previous
@@ -1862,7 +2056,7 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 7. Bayesian linear regression with Metropolis sampling
+    ## 8. Bayesian linear regression with Metropolis sampling
 
     We return to the 24 river observations from Chapter 3. How does average oxygen
     concentration differ with flow speed, and how uncertain is this relationship?
@@ -1887,7 +2081,7 @@ def _(mo):
     every flow speed.
 
     We use the following broad priors, whose biological plausibility we inspect
-    in Section 8:
+    in Section 9:
 
     $$\alpha\sim N(7,5^2),\quad \beta_z\sim N(0,5^2),\quad
       \log\sigma\sim N(\log 2,0.75^2).$$
@@ -1911,7 +2105,7 @@ def _(mo):
     and $\log\sigma$), which are also shown in the diagnostic plots.
 
     **Read this worked example:** this fit runs automatically with fixed data and
-    settings; the Section 6 controls do not change it. First read the slope and its
+    settings; the Section 7 controls do not change it. First read the slope and its
     95% posterior interval in mg/L per m/s, then compare the uncertainty band for
     mean oxygen with the wider predictive band for an individual river observation.
     As in Chapter 3, predicting an individual adds variation around the mean;
@@ -2158,7 +2352,7 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 8. Bayesian workflow and responsible interpretation
+    ## 9. Bayesian workflow and responsible interpretation
 
     A precise answer can still be misleading if the model is inappropriate. A
     useful workflow connects the calculations back to the experiment:
@@ -2294,7 +2488,7 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 9. Review questions
+    ## 10. Review questions
 
     Choose one answer for each question. Feedback appears immediately and identifies
     the interpretation or modeling principle at stake.
@@ -2481,7 +2675,7 @@ def _(mo):
     mo.md(r"""
     ---
 
-    ## 10. Summary and bridge
+    ## 11. Summary and bridge
 
     - **Prior → data → posterior:** update uncertainty by giving more weight to
       explanations that better account for the observations. Each posterior can
@@ -2492,6 +2686,9 @@ def _(mo):
     - **Keep the interval interpretations distinct.** A credible interval describes
       uncertainty given this model, prior, and data. A confidence-interval method
       is evaluated by how often its intervals contain the truth across new samples.
+    - **Interpret significance in context.** The probability of an effect after
+      significance depends on its prior probability, power, and the false-positive
+      rate. This update uses only the significant/non-significant outcome.
     - **Separate estimation from prediction.** Estimating an allergy prevalence or
       mean oxygen concentration differs from predicting a new sample or observation.
       Prediction also includes variation among observations.
