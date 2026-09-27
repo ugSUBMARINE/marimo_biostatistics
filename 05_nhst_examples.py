@@ -83,7 +83,7 @@ def _(mo, np, pd, read_csv):
     data_directory = mo.notebook_location() / "public"
     rat_data = read_csv(data_directory / "rat_data.csv", comment="#")
     peroxidase_data = read_csv(data_directory / "peroxidase.csv")
-    water_data = read_csv(data_directory / "Wasserqualitaet.csv", encoding="utf-8-sig")
+    water_data = read_csv(data_directory / "waterquality.csv")
 
     assert list(rat_data.columns) == ["age", "relax"]
     assert len(rat_data) == 17
@@ -106,8 +106,8 @@ def _(mo, np, pd, read_csv):
     assert set(peroxidase_data.groupby(["light_conditions", "tissue"]).size()) == {10}
     assert np.isfinite(peroxidase_data["peroxidase_amount"]).all()
 
-    nitrate_column = "Nitratkonzentration (mg/l)"
-    phosphate_column = "Phosphatkonzentration (mug/l)"
+    nitrate_column = "nitrate_mg_l"
+    phosphate_column = "phosphate_ug_l"
     assert {nitrate_column, phosphate_column}.issubset(water_data.columns)
 
     return nitrate_column, peroxidase_data, phosphate_column, rat_data, water_data

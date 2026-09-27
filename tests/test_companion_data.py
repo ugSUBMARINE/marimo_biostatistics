@@ -18,7 +18,7 @@ class CsvLoadingTests(unittest.TestCase):
             ("height_data.csv", {}),
             ("rat_data.csv", {"comment": "#"}),
             ("peroxidase.csv", {}),
-            ("Wasserqualitaet.csv", {"encoding": "utf-8-sig"}),
+            ("waterquality.csv", {}),
         ):
             with self.subTest(name=name):
                 pd.testing.assert_frame_equal(

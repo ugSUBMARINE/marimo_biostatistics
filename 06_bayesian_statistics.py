@@ -73,14 +73,8 @@ def _():
 
 @app.cell
 def _(mo, np, pd, read_csv):
-    water_path = mo.notebook_location() / "public" / "Wasserqualitaet.csv"
-    water_raw = read_csv(water_path, encoding="utf-8-sig")
-    flow_column = "Fließgeschwindigkeit (m/s)"
-    oxygen_column = "Sauerstoffkonzentration (mg/l)"
-    assert {flow_column, oxygen_column}.issubset(water_raw.columns)
-    water_data = water_raw[[flow_column, oxygen_column]].rename(
-        columns={flow_column: "flow_speed_m_s", oxygen_column: "oxygen_mg_l"}
-    )
+    water_path = mo.notebook_location() / "public" / "waterquality.csv"
+    water_data = read_csv(water_path)[["flow_speed_m_s", "oxygen_mg_l"]]
     assert len(water_data) == 24
     assert np.isfinite(water_data.to_numpy(dtype=float)).all()
     return (water_data,)

@@ -105,23 +105,8 @@ def _(mo):
 
 @app.cell
 def _(mo, np, pd, read_csv, stats):
-    water_data_path = mo.notebook_location() / "public" / "Wasserqualitaet.csv"
-    raw_water_data = read_csv(water_data_path, encoding="utf-8-sig")
-
-    german_to_english = {
-        "Nummer des Flusses": "river_id",
-        "Temperatur (°C)": "temperature_c",
-        "Fließgeschwindigkeit (m/s)": "flow_speed_m_s",
-        "Sauerstoffkonzentration (mg/l)": "oxygen_mg_l",
-        "Nitratkonzentration (mg/l)": "nitrate_mg_l",
-        "Phosphatkonzentration (mug/l)": "phosphate_ug_l",
-        "Wassergüte (1-20)": "water_quality_score",
-        "Besiedlungsdichte (1-20)": "population_density_score",
-        "Entfernung von der Quelle (km)": "distance_km",
-        "Vorkommen der Flussnapfschnecke (0/1)": "river_snail_present",
-        "Eutrophierungszustand (0/1)": "eutrophic",
-    }
-    water_data = raw_water_data.rename(columns=german_to_english).copy()
+    water_data_path = mo.notebook_location() / "public" / "waterquality.csv"
+    water_data = read_csv(water_data_path)
 
     variable_labels = {
         "flow_speed_m_s": "Flow speed [m/s]",
@@ -346,7 +331,7 @@ def _(mo, np, pd, read_csv, stats):
         ),
     }
 
-    assert raw_water_data.shape == (24, 11)
+    assert water_data.shape == (24, 11)
     oxygen_flow_r = pearson_details(
         water_data["flow_speed_m_s"], water_data["oxygen_mg_l"]
     )["correlation"]
@@ -377,7 +362,6 @@ def _(mo, np, pd, read_csv, stats):
         paired_bootstrap_correlation,
         pearson_details,
         phosphate_residuals,
-        raw_water_data,
         regression_intervals,
         river_partial_r,
         river_regression,
@@ -397,9 +381,8 @@ def _(mo):
     ## The river dataset
 
     The 24 rows below are paired observations from rivers reported in the course
-    material after Rudolf and Kuhlisch. Each row is one river. The original German
-    headings are retained in the source file and in this table; shorter English
-    aliases are used only inside calculations.
+    material after Rudolf and Kuhlisch. Each row is one river. English column names
+    are used in the source file, this table, and the calculations.
 
     The dataset contains three types of values:
 
@@ -414,16 +397,16 @@ def _(mo):
 
     **Explore the table:** use the search box to find a row, the page controls to
     see all 24 rivers, and horizontal scrolling to reach the remaining columns.
-    Compare *Fließgeschwindigkeit* (flow speed) with *Sauerstoffkonzentration*
-    (oxygen). Sorting or searching this table changes only its display; the
+    Compare `flow_speed_m_s` (flow speed) with `oxygen_mg_l`
+    (oxygen concentration). Sorting or searching this table changes only its display; the
     analyses below continue to use all 24 rivers.
     """)
 
 
 @app.cell
-def _(mo, raw_water_data, water_data_path):
+def _(mo, water_data, water_data_path):
     river_table = mo.ui.table(
-        raw_water_data,
+        water_data,
         pagination=True,
         page_size=12,
         selection=None,
@@ -438,7 +421,7 @@ def _(mo, raw_water_data, water_data_path):
             mo.callout(
                 mo.md(
                     f"**Source file:** `{water_data_path.name}` · "
-                    f"{len(raw_water_data)} rivers · {raw_water_data.shape[1]} variables"
+                    f"{len(water_data)} rivers · {water_data.shape[1]} variables"
                 ),
                 kind="info",
             ),
