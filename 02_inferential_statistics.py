@@ -44,6 +44,7 @@ def _():
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
+    from matplotlib.ticker import MaxNLocator
     from scipy import stats
 
     from companion_data import read_csv
@@ -62,6 +63,7 @@ def _():
         FIGURE_SIZE_LINKED,
         FIGURE_SIZE_SHALLOW,
         FIGURE_SIZE_STANDARD,
+        MaxNLocator,
         compact_table,
         np,
         pd,
@@ -783,6 +785,7 @@ def _(mo):
 def _(
     COLORS,
     FIGURE_SIZE_STANDARD,
+    MaxNLocator,
     binomial_n,
     binomial_p,
     mo,
@@ -821,6 +824,7 @@ def _(
         xlim=(-1, n_trials + 1),
         ylim=(0, min(1.02, max(0.22, 1.15 * binomial_probabilities.max()))),
     )
+    binomial_axis.xaxis.set_major_locator(MaxNLocator(nbins=8, integer=True))
     binomial_axis.grid(axis="y", linestyle=":", alpha=0.35)
     binomial_axis.legend(frameon=False, fontsize=8)
     binomial_figure.tight_layout()
@@ -924,6 +928,7 @@ def _(mo):
 def _(
     COLORS,
     FIGURE_SIZE_STANDARD,
+    MaxNLocator,
     mo,
     np,
     plt,
@@ -967,6 +972,7 @@ def _(
         xlim=(-1, max(12, poisson_lambda + 5 * np.sqrt(poisson_lambda))),
         ylim=(0, min(1.02, max(0.22, 1.15 * poisson_probabilities.max()))),
     )
+    poisson_axis.xaxis.set_major_locator(MaxNLocator(nbins=8, integer=True))
     poisson_axis.grid(axis="y", linestyle=":", alpha=0.35)
     poisson_axis.legend(frameon=False, fontsize=8)
     poisson_figure.tight_layout()
@@ -2370,8 +2376,8 @@ def _(
         xlabel="Confidence interval for the mean",
         ylabel="Generated interval",
         ylim=(-2, displayed_intervals + 1),
-        xlim=(-4, 4),
     )
+    coverage_axis.margins(x=0.05)
     coverage_axis.grid(axis="x", linestyle=":", alpha=0.35)
     coverage_axis.legend(frameon=False, fontsize=8)
     coverage_figure.tight_layout()
@@ -2437,8 +2443,8 @@ def _(mo):
 
     We rarely have the resources to repeat an experiment thousands of times.
     **Bootstrapping** approximates variation between samples by repeatedly drawing
-    from the observations we already have. Here we use the course's artificial
-    height dataset as a stand-in for the unknown population.
+    from the observations we already have. Here we use all observations in the
+    course's artificial height dataset as a stand-in for the unknown population.
 
     Each bootstrap sample contains $n$ draws from the original $n$ observations
     **with replacement**: after selecting a record, it remains available to be
@@ -2680,6 +2686,12 @@ def _(
 
     bootstrap_controls = mo.vstack(
         [
+            mo.stat(
+                f"{len(original_height_values)}",
+                label="Sample size n",
+                caption="Complete lecture height dataset",
+                bordered=True,
+            ),
             bootstrap_statistic,
             bootstrap_repetitions,
             run_bootstrap_button,
@@ -2696,6 +2708,10 @@ def _(
     bootstrap_note = mo.callout(
         mo.md(
             f"""
+            All {len(original_height_values)} heights in the lecture dataset form
+            the original sample. Each resample draws {len(original_height_values)}
+            heights **with replacement**.
+
             The original {bootstrap_result["statistic_name"].lower()} is
             {bootstrap_result["original_statistic"]:.2f} {statistic_unit}. The
             bootstrap SE is {bootstrap_standard_error:.2f} {statistic_unit}, and the
